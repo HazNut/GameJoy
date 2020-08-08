@@ -69,12 +69,12 @@ void gb::loadGame()
 		file.seekg(0, ios::beg);
 		file.read(memblock, size);
 		file.close();
-		printf("File loaded\n");
+		printf("ROM loaded.\n");
 		for (int i = 0; i < size; i++)
 			memory[i] = memblock[i];
 		delete[] memblock;
 	}
-	else printf("Unable to open file\n");
+	else printf("Unable to load ROM.\n");
 
 }
 
@@ -89,7 +89,7 @@ void gb::emulateCycle()
 
 	switch (opcode & 0xF0) // 8 bit instructions
 	{
-	case 0x00:
+	case 0x00: // Done.
 		switch (opcode & 0x0F)
 		{
 		case 0x00: // NOP
@@ -97,8 +97,8 @@ void gb::emulateCycle()
 			break;
 
 		case 0x01: // LD BC, d16
-			B = memory[PC + 1];
-			C = memory[PC + 2];
+			B = memory[PC + 2];
+			C = memory[PC + 1];
 			PC += 3;
 			break;
 
@@ -135,7 +135,7 @@ void gb::emulateCycle()
 			break;
 
 		case 0x08: // LD (a16), SP
-			memory[(memory[PC + 1] << 8) | memory[PC + 2]] = SP;
+			memory[(memory[PC + 2] << 8) | memory[PC + 1]] = SP;
 			PC += 3;
 			break;
 
@@ -161,6 +161,7 @@ void gb::emulateCycle()
 
 		case 0x0C: // INC C
 			INC(C);
+			PC += 1;
 			break;
 
 		case 0x0D: // DEC C
@@ -180,7 +181,7 @@ void gb::emulateCycle()
 		}
 		break;
 
-	case 0x10:
+	case 0x10: // Need to update STOP to cancel EI.
 		switch (opcode & 0x0F)
 		{
 		case 0x00: // STOP
@@ -189,13 +190,13 @@ void gb::emulateCycle()
 			break;
 
 		case 0x01: // LD DE, d16
-			D = memory[PC + 1];
-			E = memory[PC + 2];
+			D = memory[PC + 2];
+			E = memory[PC + 1];
 			PC += 3;
 			break;
 
 		case 0x02: // LD (DE), A
-			memory[(D << 8) | E] = memory[A];
+			memory[(D << 8) | E] = A;
 			PC += 1;
 			break;
 
@@ -235,7 +236,6 @@ void gb::emulateCycle()
 			DE = combineReg(D, E);
 			ADD(HL, DE);
 			splitReg(H, L, HL);
-			splitReg(D, E, DE);
 			PC += 1;
 			break;
 
@@ -273,22 +273,24 @@ void gb::emulateCycle()
 		}
 		break;
 
-	case 0x20:
+	case 0x20: // Done.
 		switch (opcode & 0x0F)
 		{
 		case 0x00: // JR NZ, r8
 			if (Zb == 0)
 				PC += memory[PC + 1];
+			else
+				PC += 2;
 			break;
 		
 		case 0x01: // LD HL, d16
-			H = memory[PC + 1];
-			L = memory[PC + 2];
+			H = memory[PC + 2];
+			L = memory[PC + 1];
 			PC += 3;
 			break;
 
 		case 0x02: // LD (HL+), A
-			memory[(H << 8) | L] = memory[A];
+			memory[(H << 8) | L] = A;
 			HL = combineReg(H, L);
 			INC(HL);
 			splitReg(H, L, HL);
@@ -331,6 +333,8 @@ void gb::emulateCycle()
 		case 0x08: // JR Z, r8
 			if (Zb == 1)
 				PC += memory[PC + 1];
+			else
+				PC += 2;
 			break;
 
 		case 0x09: // ADD HL, HL
@@ -374,24 +378,27 @@ void gb::emulateCycle()
 			A = ~A;
 			Nb = 1;
 			Hb = 1;
+			break;
 		}
 		break;
 
-	case 0x30:
+	case 0x30: // Done.
 		switch (opcode & 0x0F)
 		{
 		case 0x00: // JR NC, r8
 			if (Cb == 0)
 				PC += memory[PC + 1];
+			else
+				PC += 2;
 			break;
 
 		case 0x01: // LD SP, d16
-			SP = (memory[PC + 1] << 8) | memory[PC + 2];
+			SP = (memory[PC + 2] << 8) | memory[PC + 1];
 			PC += 3;
 			break;
 
 		case 0x02: // LD (HL-), A
-			memory[(H << 8) | L] = memory[A];
+			memory[(H << 8) | L] = A;
 			HL = combineReg(H, L);
 			DEC(HL);
 			splitReg(H, L, HL);
@@ -428,6 +435,8 @@ void gb::emulateCycle()
 		case 0x08: // JR C, r8
 			if (Cb == 1)
 				PC += memory[PC + 1];
+			else
+				PC += 2;
 			break;
 
 		case 0x09: // ADD HL, SP
@@ -474,7 +483,7 @@ void gb::emulateCycle()
 		}
 		break;
 
-	case 0x40:
+	case 0x40: // Done.
 		switch (opcode & 0x0F)
 		{
 		case 0x00: // LD B, B
@@ -559,7 +568,7 @@ void gb::emulateCycle()
 		}
 		break;
 
-	case 0x50:
+	case 0x50: // Done.
 		switch (opcode & 0x0F)
 		{
 		case 0x00: // LD D, B
@@ -644,7 +653,7 @@ void gb::emulateCycle()
 		}
 		break;
 
-	case 0x60:
+	case 0x60: // Done.
 		switch (opcode & 0x0F)
 		{
 		case 0x00: // LD H, B
@@ -729,7 +738,7 @@ void gb::emulateCycle()
 		}
 		break;
 
-	case 0x70:
+	case 0x70: // Need to update HALT to cancel EI.
 		switch (opcode & 0x0F)
 		{
 		case 0x00: // LD (HL), B
@@ -764,7 +773,7 @@ void gb::emulateCycle()
 
 		case 0x06: // HALT
 			IME = 0;
-			
+			break;
 
 		case 0x07: // LD (HL), A
 			memory[(H << 8) | L] = A;
@@ -813,7 +822,7 @@ void gb::emulateCycle()
 		}
 		break;
 
-	case 0x80:
+	case 0x80: // Done.
 		switch (opcode & 0x0F)
 		{
 		case 0x00: // ADD A, B
@@ -876,12 +885,12 @@ void gb::emulateCycle()
 			PC += 1;
 			break;
 
-		case 0x0C: // ADD A, H
+		case 0x0C: // ADC A, H
 			ADD(A, H, true);
 			PC += 1;
 			break;
 
-		case 0x0D: // ADD A, L
+		case 0x0D: // ADC A, L
 			ADD(A, L, true);
 			PC += 1;
 			break;
@@ -898,7 +907,7 @@ void gb::emulateCycle()
 		}
 		break;
 	
-	case 0x90:
+	case 0x90: // Done.
 		switch (opcode & 0x0F)
 		{
 		case 0x00: // SUB B
@@ -983,7 +992,7 @@ void gb::emulateCycle()
 		}
 		break;
 
-	case 0xA0:
+	case 0xA0: // Done.
 		switch (opcode & 0x0F)
 		{
 		case 0x00: // AND B
@@ -1068,7 +1077,7 @@ void gb::emulateCycle()
 		}
 		break;
 
-	case 0xB0:
+	case 0xB0: // Done.
 		switch (opcode & 0x0F)
 		{
 		case 0x00: // OR B
@@ -1153,13 +1162,13 @@ void gb::emulateCycle()
 		}
 		break;
 
-	case 0xC0:
+	case 0xC0: // Done.
 		switch (opcode & 0x0F)
 		{
 		case 0x00: // RET NZ
 			if (Zb == 0)
 			{
-				PC = (memory[SP] << 8) | memory[SP + 1];
+				PC = (memory[SP + 1] << 8) | memory[SP];
 				SP += 2;
 			}
 			else
@@ -1169,8 +1178,8 @@ void gb::emulateCycle()
 			break;
 
 		case 0x01: // POP BC
-			B = memory[SP];
-			C = memory[SP + 1];
+			B = memory[SP + 1];
+			C = memory[SP];
 			SP += 2;
 			PC += 1;
 			break;
@@ -1178,7 +1187,7 @@ void gb::emulateCycle()
 		case 0x02: // JP NZ, a16
 			if (Zb == 0)
 			{
-				PC = (memory[PC + 1] << 8) | memory[PC + 2];
+				PC = (memory[PC + 2] << 8) | memory[PC + 1];
 			}
 			else
 			{
@@ -1187,15 +1196,15 @@ void gb::emulateCycle()
 			break;
 
 		case 0x03: // JP a16
-			PC = (memory[PC + 1] << 8) | memory[PC + 2];
+			PC = (memory[PC + 2] << 8) | memory[PC + 1];
 			break;
 
 		case 0x04: // CALL NZ, a16
 			if (Zb == 0)
 			{
-				memory[SP - 1] = PC & 0xFF;
-				memory[SP - 2] = (PC >> 8) & 0xFF;
-				PC = (memory[PC + 1] << 8) | memory[PC + 2];
+				memory[SP - 1] = PC >> 8;
+				memory[SP - 2] = PC & 0xFF;
+				PC = (memory[PC + 2] << 8) | memory[PC + 1];
 				SP -= 2;
 			}
 			else
@@ -1205,8 +1214,8 @@ void gb::emulateCycle()
 			break;
 
 		case 0x05: // PUSH BC
-			memory[SP - 1] = C;
-			memory[SP - 2] = B;
+			memory[SP - 1] = B;
+			memory[SP - 2] = C;
 			SP -= 2;
 			break;
 
@@ -1216,15 +1225,15 @@ void gb::emulateCycle()
 			break;
 
 		case 0x07: // RST 00H
-			memory[SP - 1] = PC & 0xFF;
-			memory[SP - 2] = (PC >> 8) & 0xFF;
+			memory[SP - 1] = PC >> 8;
+			memory[SP - 2] = PC & 0xFF;
 			PC = 0x0;
 			break;
 
 		case 0x08: // RET Z
 			if (Zb == 1)
 			{
-				PC = (memory[SP] << 8) | memory[SP + 1];
+				PC = (memory[SP + 1] << 8) | memory[SP];
 				SP += 2;
 			}
 			else
@@ -1234,14 +1243,14 @@ void gb::emulateCycle()
 			break;
 
 		case 0x09: // RET
-			PC = (memory[SP] << 8) | memory[SP + 1];
+			PC = (memory[SP + 1] << 8) | memory[SP];
 			SP += 2;
 			break;
 
 		case 0x0A: // JP Z, a16
 			if (Zb == 1)
 			{
-				PC = (memory[PC + 1] << 8) | memory[PC + 2];
+				PC = (memory[PC + 2] << 8) | memory[PC + 1];
 			}
 			else
 			{
@@ -1252,9 +1261,9 @@ void gb::emulateCycle()
 		case 0x0C: // CALL Z, a16
 			if (Zb == 1)
 			{
-				memory[SP - 1] = PC & 0xFF;
-				memory[SP - 2] = (PC >> 8) & 0xFF;
-				PC = (memory[PC + 1] << 8) | memory[PC + 2];
+				memory[SP - 1] = PC >> 8;
+				memory[SP - 2] = PC & 0xFF;
+				PC = (memory[PC + 2] << 8) | memory[PC + 1];
 				SP -= 2;
 			}
 			else
@@ -1264,9 +1273,9 @@ void gb::emulateCycle()
 			break;
 
 		case 0x0D: // CALL a16
-			memory[SP - 1] = PC & 0xFF;
-			memory[SP - 2] = (PC >> 8) & 0xFF;
-			PC = (memory[PC + 1] << 8) | memory[PC + 2];
+			memory[SP - 1] = PC >> 8;
+			memory[SP - 2] = PC & 0xFF;
+			PC = (memory[PC + 2] << 8) | memory[PC + 1];
 			SP -= 2;
 			break;
 
@@ -1276,20 +1285,20 @@ void gb::emulateCycle()
 			break;
 
 		case 0x0F: // RST 08H
-			memory[SP - 1] = PC & 0xFF;
-			memory[SP - 2] = (PC >> 8) & 0xFF;
+			memory[SP - 1] = PC >> 8;
+			memory[SP - 2] = PC & 0xFF;
 			PC = 0x08;
 			break;
 		}
 		break;
 
-	case 0xD0:
+	case 0xD0: // Done.
 		switch (opcode & 0x0F)
 		{
 		case 0x00: // RET NC
 			if (Nb == 0)
 			{
-				PC = (memory[SP] << 8) | memory[SP + 1];
+				PC = (memory[SP + 1] << 8) | memory[SP];
 				SP += 2;
 			}
 			else
@@ -1299,8 +1308,8 @@ void gb::emulateCycle()
 			break;
 
 		case 0x01: // POP DE
-			D = memory[SP];
-			E = memory[SP + 1];
+			D = memory[SP + 1];
+			E = memory[SP];
 			SP += 2;
 			PC += 1;
 			break;
@@ -1308,7 +1317,7 @@ void gb::emulateCycle()
 		case 0x02: // JP NC, a16
 			if (Cb == 0)
 			{
-				PC = (memory[PC + 1] << 8) | memory[PC + 2];
+				PC = (memory[PC + 2] << 8) | memory[PC + 1];
 			}
 			else
 			{
@@ -1319,9 +1328,9 @@ void gb::emulateCycle()
 		case 0x04: // CALL NC, a16
 			if (Cb == 0)
 			{
-				memory[SP - 1] = PC & 0xFF;
-				memory[SP - 2] = (PC >> 8) & 0xFF;
-				PC = (memory[PC + 1] << 8) | memory[PC + 2];
+				memory[SP - 1] = PC >> 8;
+				memory[SP - 2] = PC & 0xFF;
+				PC = (memory[PC + 2] << 8) | memory[PC + 1];
 				SP -= 2;
 			}
 			else
@@ -1342,15 +1351,15 @@ void gb::emulateCycle()
 			break;
 
 		case 0x07: // RST 10H
-			memory[SP - 1] = PC & 0xFF;
-			memory[SP - 2] = (PC >> 8) & 0xFF;
+			memory[SP - 1] = PC >> 8;
+			memory[SP - 2] = PC & 0xFF;
 			PC = 0x10;
 			break;
 
 		case 0x08: // RET C
 			if (Cb == 1)
 			{
-				PC = (memory[SP] << 8) | memory[SP + 1];
+				PC = (memory[SP + 1] << 8) | memory[SP];
 				SP += 2;
 			}
 			else
@@ -1360,7 +1369,7 @@ void gb::emulateCycle()
 			break;
 
 		case 0x09: // RETI
-			PC = (memory[SP] << 8) | memory[SP + 1];
+			PC = (memory[SP + 1] << 8) | memory[SP];
 			SP += 2;
 			IME = 1;
 			break;
@@ -1368,7 +1377,7 @@ void gb::emulateCycle()
 		case 0x0A: // JP C, a16
 			if (Cb == 1)
 			{
-				PC = (memory[PC + 1] << 8) | memory[PC + 2];
+				PC = (memory[PC + 2] << 8) | memory[PC + 1];
 			}
 			else
 			{
@@ -1379,9 +1388,9 @@ void gb::emulateCycle()
 		case 0x0C: // CALL C, a16
 			if (Cb == 1)
 			{
-				memory[SP - 1] = PC & 0xFF;
-				memory[SP - 2] = (PC >> 8) & 0xFF;
-				PC = (memory[PC + 1] << 8) | memory[PC + 2];
+				memory[SP - 1] = PC >> 8;
+				memory[SP - 2] = PC & 0xFF;
+				PC = (memory[PC + 2] << 8) | memory[PC + 1];
 				SP -= 2;
 			}
 			else
@@ -1396,14 +1405,14 @@ void gb::emulateCycle()
 			break;
 
 		case 0x0F: // RST 18H
-			memory[SP - 1] = PC & 0xFF;
-			memory[SP - 2] = (PC >> 8) & 0xFF;
+			memory[SP - 1] = PC >> 8;
+			memory[SP - 2] = PC & 0xFF;
 			PC = 0x18;
 			break;
 		}
 		break;
 
-	case 0xE0:
+	case 0xE0: // Done.
 		switch (opcode & 0x0F)
 		{
 		case 0x00: // LDH (a8), A
@@ -1412,8 +1421,8 @@ void gb::emulateCycle()
 			break;
 
 		case 0x01: // POP HL
-			H = memory[SP];
-			L = memory[SP + 1];
+			H = memory[SP + 1];
+			L = memory[SP];
 			SP += 2;
 			PC += 1;
 			break;
@@ -1427,6 +1436,7 @@ void gb::emulateCycle()
 			memory[SP - 1] = H;
 			memory[SP - 2] = L;
 			SP -= 2;
+			PC += 1;
 			break;
 
 		case 0x06: // AND d8
@@ -1435,8 +1445,8 @@ void gb::emulateCycle()
 			break;
 
 		case 0x07: // RST 20H
-			memory[SP - 1] = PC & 0xFF;
-			memory[SP - 2] = (PC >> 8) & 0xFF;
+			memory[SP - 1] = PC >> 8;
+			memory[SP - 2] = PC & 0xFF;
 			PC = 0x20;
 			break;
 
@@ -1450,7 +1460,7 @@ void gb::emulateCycle()
 			break;
 
 		case 0x0A: // LD (a16), A
-			memory[memory[PC + 1] | memory[PC + 2]] = A;
+			memory[memory[PC + 2] | memory[PC + 1]] = A;
 			PC += 3;
 			break;
 
@@ -1460,14 +1470,14 @@ void gb::emulateCycle()
 			break;
 
 		case 0x0F: // RST 28H
-			memory[SP - 1] = PC & 0xFF;
-			memory[SP - 2] = (PC >> 8) & 0xFF;
+			memory[SP - 1] = PC >> 8;
+			memory[SP - 2] = PC & 0xFF;
 			PC = 0x28;
 			break;
 		}
 		break;
 
-	case 0xF0:
+	case 0xF0: // Implement EI and DI.
 		switch (opcode & 0x0F)
 		{
 		case 0x00: // LDH A, (a8)
@@ -1484,7 +1494,7 @@ void gb::emulateCycle()
 
 		case 0x02: // LD A, (C)
 			A = memory[C];
-			PC += 2;
+			PC += 1;
 			break;
 
 		case 0x03: // DI
@@ -1493,9 +1503,9 @@ void gb::emulateCycle()
 			break;
 
 		case 0x05: // PUSH AF
-			A = memory[SP];
-			F = memory[SP + 1];
-			SP += 2;
+			A = memory[SP - 1];
+			F = memory[SP - 2];
+			SP -= 2;
 			PC += 1;
 			break;
 
@@ -1505,8 +1515,8 @@ void gb::emulateCycle()
 			break;
 
 		case 0x07: // RST 30H
-			memory[SP - 1] = PC & 0xFF;
-			memory[SP - 2] = (PC >> 8) & 0xFF;
+			memory[SP - 1] = PC >> 8;
+			memory[SP - 2] = PC & 0xFF;
 			PC = 0x30;
 			break;
 
@@ -1530,7 +1540,7 @@ void gb::emulateCycle()
 			break;
 
 		case 0x0A: // LD A, (a16)
-			A = (memory[PC + 1] << 8) | memory[PC + 2];
+			A = (memory[PC + 2] << 8) | memory[PC + 1];
 			PC += 3;
 			break;
 
@@ -1543,20 +1553,18 @@ void gb::emulateCycle()
 			break;
 
 		case 0x0F: // RST 38H
-			memory[SP - 1] = PC & 0xFF;
-			memory[SP - 2] = (PC >> 8) & 0xFF;
+			memory[SP - 1] = PC >> 8;
+			memory[SP - 2] = PC & 0xFF;
 			PC = 0x38;
 			break;
 		}
 		break;
 
-
 	default:
 		printf("Unknown opcode.\n");
 	}
 	setFlags();
-	Sleep(1000);
-	
+	//Sleep(1000);
 }
 
 // Set the values of the flag bits in register F.
