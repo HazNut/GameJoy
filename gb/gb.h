@@ -3,7 +3,6 @@ class gb
 {
 private:
 	unsigned char opcode;
-	unsigned char memory[65536]; // 16-bit address bus means 2^16 bytes can be addressed.
 	unsigned char A, B, C, D, E, F, H, L; // Registers.
 	unsigned int SP, PC; // Stack pointer and program counter.
 	unsigned int HL, BC, DE; // Some pairs of registers can be used together as a 16-bit register.
@@ -11,6 +10,7 @@ private:
 	int IME; // Flag to disable or enable interrupts.
 
 public:
+	unsigned char memory[65536]; // 16-bit address bus means 2^16 bytes can be addressed.
 	void initialize(); // Initialize the Game Boy's state.
 	void loadGame(); // Load the game into memory.
 	void emulateCycle(); // Emulate an instruction.
