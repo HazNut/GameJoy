@@ -1,5 +1,6 @@
 #include "gb.h"
 #include "SDL.h"
+#include <bitset>
 
 gb myGB;
 
@@ -21,28 +22,36 @@ int main(int argc, char** argv)
 
 		for (int tile = 0; tile < 32 * 32; tile++)
 		{
-			int tileNumber = myGB.memory[0x9800 + tile];
+			int tileNumber = myGB.memory[0x9800 + (8 * tile)];
 			for (int byte = 0; byte < 15; byte += 2)
 			{
 				char lowByte = myGB.memory[(tileNumber * 16) + 0x8000 + byte];
 				char highByte = myGB.memory[(tileNumber * 16) + 0x8000 + byte + 1];
 				for (int bit = 0; bit < 8; bit++)
 				{
-					char lowBit = lowByte >> bit & 0x1;
-					char highBit = highByte >> bit & 0x1;
+					char lowBit = lowByte >> (7 - bit) & 0x1;
+					char highBit = highByte >> (7 - bit) & 0x1;
 					int total = (lowBit * 1) + (highBit * 2);
 					if (total > 0)
 					{
-						SDL_Rect rect;
-						rect.x = ((tile * 32) + (byte * 8) + bit) * 5;
-						rect.y = tile * 5;
-						rect.w = 5;
-						rect.h = 5;
-						SDL_RenderFillRect(renderer, &rect);
+						SDL_Rect rect;	
+						for (int i = 0; i < 5; i++)
+						{
+							rect.x = (((tile * 8) + bit) * 5) + i;
+							rect.y = ((byte / 2) * 5) + i;
+							rect.w = 5;
+							rect.h = 5;
+							if (rect.x > 160 * 5)
+								rect.x = ((rect.x * 5) - (160 * 5));
+							if (rect.y > 144 * 5)
+								rect.x = ((rect.y * 5) - (144 * 5));
+							SDL_RenderFillRect(renderer, &rect);
+						}
 					}
 				}
 			}
 		}
+
 		SDL_RenderPresent(renderer);	
 		while (SDL_PollEvent(&e) != 0)
 		{
