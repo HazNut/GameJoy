@@ -1,4 +1,5 @@
 #pragma once
+#include <stdio.h>
 class gb
 {
 private:
@@ -11,6 +12,7 @@ private:
 	bool enableInterrupts;
 
 public:
+	FILE* pFile;
 	unsigned char memory[65536]; // 16-bit address bus means 2^16 bytes can be addressed.
 	void initialize(); // Initialize the Game Boy's state.
 	void loadGame(); // Load the game into memory.
@@ -30,6 +32,7 @@ public:
 	void SHIFT(unsigned char dir, unsigned char &r);
 	void ADD(unsigned char &val1, unsigned char val2); // Adds a byte to another byte.
 	void ADD(unsigned int &r1, unsigned int r2); // Adds a 16-bit value to another 16-bit value.
+	void ADD(unsigned int& val1, signed int val2);
 	void SUB(unsigned char val);
 	void AND(unsigned char val);
 	void XOR(unsigned char val);
