@@ -112,16 +112,6 @@ void drawSprites(SDL_Renderer *renderer)
 
 			}
 		}
-
-
-
-
-
-
-
-
-
-
 	}
 	SDL_RenderPresent(renderer);
 }

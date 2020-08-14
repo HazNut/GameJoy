@@ -12,20 +12,9 @@ void gb::initialize()
 {
 	/*remove("output.txt");
 	fopen_s(&pFile, "output.txt", "a");*/
+
 	for (int i = 0x0000; i <= 0xFFFF; i++)
 		memory[i] = 0x0;
-
-	//A = 0x00;
-	//F = 0x00;
-	//B = 0x00;
-	//C = 0x00;
-	//D = 0x00;
-	//E = 0x00;
-	//H = 0x00;
-	//L = 0x00;
-	//SP = 0x00;
-
-	//PC = 0x00;
 
 	A = 0x01;
 	F = 0xB0;
@@ -87,7 +76,7 @@ void gb::loadGame()
 	streampos size;
 	char* memblock;
 
-	ifstream file("individual/06-ld r,r.gb", ios::in | ios::binary | ios::ate);
+	ifstream file("individual/01-special.gb", ios::in | ios::binary | ios::ate);
 	if (file.is_open())
 	{
 		size = file.tellg();
@@ -107,6 +96,7 @@ void gb::loadGame()
 // Emulate a cycle of the Game Boy.
 void gb::emulateCycle()
 {
+	//printf("%X\n", 0xFF - (0xFF + 0));
 	// Get the opcode and execute the required instructions.
 	opcode = memory[PC];
 	char opcodeStr[3];
@@ -1497,31 +1487,27 @@ void gb::emulateCycle()
 		printf("A = %X, B = %X, C = %X, D = %X, E = %X, F = %X, H = %X L = %X,\n", A, B, C, D, E, F, H, L);
 		printf("HL = %X, BC = %X, DE = %X, SP = %X\n", combineReg(H, L), combineReg(B, C), combineReg(D, E), SP);*/
 
-		/*if (PC != 0xCC5F)
-			fprintf(pFile, "A: %X F: %X B: %X C: %X D: %X E: %X H: %X L: %X SP: %X PC: 00:%X OPCODE: %X\n", A, F, B, C, D, E, H, L, SP, PC, opcode);*/
-
 		switch (opcode & 0xF0) // 8 bit instructions
 		{
-		case 0x00: // Done. TESTED RELEVANT
+		case 0x00: // Done.
 			switch (opcode & 0x0F)
 			{
-			case 0x00: // NOP - TESTED
+			case 0x00: // NOP
 				PC += 1;
 				break;
 
-			case 0x01: // LD BC, d16 - TESTED
+			case 0x01: // LD BC, d16
 				B = memory[PC + 2];
 				C = memory[PC + 1];
 				PC += 3;
 				break;
 
 			case 0x02: // LD (BC), A
-				printf("LD (BC), A\n");
 				memory[(B << 8) | C] = A;
 				PC += 1;
 				break;
 
-			case 0x03: // INC BC - TESTED
+			case 0x03: // INC BC
 				BC = combineReg(B, C);
 				INC(BC);
 				splitReg(B, C, BC);
@@ -1533,12 +1519,12 @@ void gb::emulateCycle()
 				PC += 1;
 				break;
 
-			case 0x05: // DEC B - TESTED
+			case 0x05: // DEC B
 				DEC(B);
 				PC += 1;
 				break;
 
-			case 0x06: // LD B, d8 - TESTED
+			case 0x06: // LD B, d8
 				B = memory[PC + 1];
 				PC += 2;
 				break;
@@ -1580,12 +1566,12 @@ void gb::emulateCycle()
 				PC += 1;
 				break;
 
-			case 0x0D: // DEC C - SHOULD WORK
+			case 0x0D: // DEC C
 				DEC(C);
 				PC += 1;
 				break;
 
-			case 0x0E: // LD C, d8 - TESTED
+			case 0x0E: // LD C, d8
 				C = memory[PC + 1];
 				PC += 2;
 				break;
@@ -1598,7 +1584,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0x10: // Need to update STOP to do something. TESTED RELEVANT
+		case 0x10: // Need to update STOP to do something.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // STOP
@@ -1606,35 +1592,35 @@ void gb::emulateCycle()
 				PC += 1;
 				break;
 
-			case 0x01: // LD DE, d16 - TESTED
+			case 0x01: // LD DE, d16
 				D = memory[PC + 2];
 				E = memory[PC + 1];
 				PC += 3;
 				break;
 
-			case 0x02: // LD (DE), A - TESTED
+			case 0x02: // LD (DE), A
 				memory[(D << 8) | E] = A;
 				PC += 1;
 				break;
 
-			case 0x03: // INC DE - SHOULD WORK
+			case 0x03: // INC DE
 				DE = combineReg(D, E);
 				INC(DE);
 				splitReg(D, E, DE);
 				PC += 1;
 				break;
 
-			case 0x04: // INC D - TESTED
+			case 0x04: // INC D
 				INC(D);
 				PC += 1;
 				break;
 
-			case 0x05: // DEC D - SHOULD WORK
+			case 0x05: // DEC D
 				DEC(D);
 				PC += 1;
 				break;
 
-			case 0x06: // LD D, d8 - SHOULD WORK
+			case 0x06: // LD D, d8
 				D = memory[PC + 1];
 				PC += 2;
 				break;
@@ -1645,7 +1631,7 @@ void gb::emulateCycle()
 				PC += 1;
 				break;
 
-			case 0x08: // JR r8 - SEEMS TO WORK
+			case 0x08: // JR r8
 			{
 				signed char offset;
 				PC += 1;
@@ -1662,34 +1648,34 @@ void gb::emulateCycle()
 				PC += 1;
 				break;
 
-			case 0x0A: // LD A, (DE) - TESTED
+			case 0x0A: // LD A, (DE)
 				A = memory[(D << 8) | E];
 				PC += 1;
 				break;
 
-			case 0x0B: // DEC DE - SHOULD WORK
+			case 0x0B: // DEC DE
 				DE = combineReg(D, E);
 				DEC(DE);
 				splitReg(D, E, DE);
 				PC += 1;
 				break;
 
-			case 0x0C: // INC E - SHOULD WORK
+			case 0x0C: // INC E
 				INC(E);
 				PC += 1;
 				break;
 
-			case 0x0D: // DEC E - SHOULD WORK
+			case 0x0D: // DEC E
 				DEC(E);
 				PC += 1;
 				break;
 
-			case 0x0E: // LD E, d8 - SHOULD WORK
+			case 0x0E: // LD E, d8
 				E = memory[PC + 1];
 				PC += 2;
 				break;
 
-			case 0x0F: // RRA - SEEMS TO WORK
+			case 0x0F: // RRA
 				ROT('R', true, A);
 				Zb = 0;
 				PC += 1;
@@ -1697,10 +1683,10 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0x20: // Done. TESTED RELEVANT
+		case 0x20: // Done.
 			switch (opcode & 0x0F)
 			{
-			case 0x00: // JR NZ, r8 - SEEMS TO WORK
+			case 0x00: // JR NZ, r8
 				if (Zb == 0)
 				{
 					signed char offset;
@@ -1713,13 +1699,13 @@ void gb::emulateCycle()
 					PC += 2;
 				break;
 
-			case 0x01: // LD HL, d16 - SHOULD WORK
+			case 0x01: // LD HL, d16
 				H = memory[PC + 2];
 				L = memory[PC + 1];
 				PC += 3;
 				break;
 
-			case 0x02: // LD (HL+), A - SEEMS TO WORK
+			case 0x02: // LD (HL+), A
 				memory[(H << 8) | L] = A;
 				HL = combineReg(H, L);
 				INC(HL);
@@ -1727,24 +1713,24 @@ void gb::emulateCycle()
 				PC += 1;
 				break;
 
-			case 0x03: // INC HL - SHOULD WORK
+			case 0x03: // INC HL
 				HL = combineReg(H, L);
 				INC(HL);
 				splitReg(H, L, HL);
 				PC += 1;
 				break;
 
-			case 0x04: // INC H - SHOULD WORK
+			case 0x04: // INC H
 				INC(H);
 				PC += 1;
 				break;
 
-			case 0x05: // DEC H - SHOULD WORK
+			case 0x05: // DEC H
 				DEC(H);
 				PC += 1;
 				break;
 
-			case 0x06: // LD H, d8 - SHOULD WORK
+			case 0x06: // LD H, d8
 				H = memory[PC + 1];
 				PC += 2;
 				break;
@@ -1764,7 +1750,7 @@ void gb::emulateCycle()
 				PC += 1;
 			}
 
-			case 0x08: // JR Z, r8 - SHOULD WORK
+			case 0x08: // JR Z, r8
 				if (Zb == 1)
 				{
 					signed char offset;
@@ -1777,14 +1763,14 @@ void gb::emulateCycle()
 					PC += 2;
 				break;
 
-			case 0x09: // ADD HL, HL - SEEMS TO WORK
+			case 0x09: // ADD HL, HL
 				HL = combineReg(H, L);
 				ADD(HL, HL);
 				splitReg(H, L, HL);
 				PC += 1;
 				break;
 
-			case 0x0A: // LD A, (HL+) - SEEMS TO WORK
+			case 0x0A: // LD A, (HL+)
 				A = memory[(H << 8) | L];
 				HL = combineReg(H, L);
 				INC(HL);
@@ -1792,24 +1778,24 @@ void gb::emulateCycle()
 				PC += 1;
 				break;
 
-			case 0x0B: // DEC HL - SHOULD WORK
+			case 0x0B: // DEC HL
 				HL = combineReg(H, L);
 				DEC(HL);
 				splitReg(H, L, HL);
 				PC += 1;
 				break;
 
-			case 0x0C: // INC L - SHOULD WORK
+			case 0x0C: // INC L
 				INC(L);
 				PC += 1;
 				break;
 
-			case 0x0D: // DEC L - SHOULD WORK
+			case 0x0D: // DEC L
 				DEC(L);
 				PC += 1;
 				break;
 
-			case 0x0E: // LD L, d8 - SHOULD WORK
+			case 0x0E: // LD L, d8
 				L = memory[PC + 1];
 				PC += 2;
 				break;
@@ -1912,7 +1898,7 @@ void gb::emulateCycle()
 				PC += 1;
 				break;
 
-			case 0x0C: // INC A                    FINE
+			case 0x0C: // INC A
 				INC(A);
 				PC += 1;
 				break;
@@ -1922,13 +1908,16 @@ void gb::emulateCycle()
 				PC += 1;
 				break;
 
-			case 0x0E: // LD A, d8                  FINE
+			case 0x0E: // LD A, d8
 				A = memory[PC + 1];
 				PC += 2;
 				break;
 
 			case 0x0F: // CCF
-				Cb = ~Cb;
+				if (Cb == 0)
+					Cb = 1;
+				else
+					Cb = 0;
 				Nb = 0;
 				Hb = 0;
 				PC += 1;
@@ -2280,82 +2269,82 @@ void gb::emulateCycle()
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // ADD A, B
-				ADD(A, B);
+				ADD(A, B, false);
 				PC += 1;
 				break;
 
 			case 0x01: // ADD A, C
-				ADD(A, C);
+				ADD(A, C, false);
 				PC += 1;
 				break;
 
 			case 0x02: // ADD A, D
-				ADD(A, D);
+				ADD(A, D, false);
 				PC += 1;
 				break;
 
 			case 0x03: // ADD A, E
-				ADD(A, E);
+				ADD(A, E, false);
 				PC += 1;
 				break;
 
 			case 0x04: // ADD A, H
-				ADD(A, H);
+				ADD(A, H, false);
 				PC += 1;
 				break;
 
 			case 0x05: // ADD A, L
-				ADD(A, L);
+				ADD(A, L, false);
 				PC += 1;
 				break;
 
 			case 0x06: // ADD A, (HL)
-				ADD(A, memory[H << 8 | L]);
+				ADD(A, memory[H << 8 | L], false);
 				PC += 1;
 				break;
 
 			case 0x07: // ADD A, A
-				ADD(A, A);
+				ADD(A, A, false);
 				PC += 1;
 				break;
 
 			case 0x08: // ADC A, B
-				ADD(A, B + Cb);
+				ADD(A, B, true);
 				PC += 1;
 				break;
 
 			case 0x09: // ADC A, C
-				ADD(A, C + Cb);
+				ADD(A, C, true);
 				PC += 1;
 				break;
 
 			case 0x0A: // ADC A, D
-				ADD(A, D + Cb);
+				ADD(A, D, true);
 				PC += 1;
 				break;
 
 			case 0x0B: // ADC A, E
-				ADD(A, E + Cb);
+				ADD(A, E, true);
 				PC += 1;
 				break;
 
 			case 0x0C: // ADC A, H
-				ADD(A, H + Cb);
+				ADD(A, H, true);
 				PC += 1;
 				break;
 
 			case 0x0D: // ADC A, L
-				ADD(A, L + Cb);
+				ADD(A, L, true);
 				PC += 1;
 				break;
 
 			case 0x0E: // ADC A, (HL)
-				ADD(A, memory[H << 8 | L] + Cb);
+				ADD(A, memory[H << 8 | L], true);
 				PC += 1;
 				break;
 
 			case 0x0F: // ADC A, A
-				ADD(A, A + Cb);
+				ADD(A, A, true);
 				PC += 1;
 				break;
 			}
@@ -2365,83 +2354,82 @@ void gb::emulateCycle()
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // SUB B
-				SUB(B);
+				SUB(B, false);
 				PC += 1;
 				break;
 
 			case 0x01: // SUB C
-				SUB(C);
+				SUB(C, false);
 				PC += 1;
 				break;
 
 			case 0x02: // SUB D
-				SUB(D);
+				SUB(D, false);
 				PC += 1;
 				break;
 
 			case 0x03: // SUB E
-				SUB(E);
+				SUB(E, false);
 				PC += 1;
 				break;
 
 			case 0x04: // SUB H
-				SUB(H);
+				SUB(H, false);
 				PC += 1;
 				break;
 
 			case 0x05: // SUB L
-				SUB(L);
+				SUB(L, false);
 				PC += 1;
 				break;
 
 			case 0x06: // SUB (HL)
-				SUB(memory[H << 8 | L]);
+				SUB(memory[H << 8 | L], false);
 				PC += 1;
 				break;
 
 			case 0x07: // SUB A
-				SUB(A);
-				Zb = 0;
+				SUB(A, false);
 				PC += 1;
 				break;
 
 			case 0x08: // SBC A, B
-				SUB(B + Cb);
+				SUB(B, true);
 				PC += 1;
 				break;
 
 			case 0x09: // SBC A, C
-				SUB(C + Cb);
+				SUB(C, true);
 				PC += 1;
 				break;
 
 			case 0x0A: // SBC A, D
-				SUB(D + Cb);
+				SUB(D, true);
 				PC += 1;
 				break;
 
 			case 0x0B: // SBC A, E
-				SUB(E + Cb);
+				SUB(E, true);
 				PC += 1;
 				break;
 
 			case 0x0C: // SBC A, H
-				SUB(H + Cb);
+				SUB(H, true);
 				PC += 1;
 				break;
 
 			case 0x0D: // SBC A, L
-				SUB(L + Cb);
+				SUB(L, true);
 				PC += 1;
 				break;
 
 			case 0x0E: // SBC A, (HL)
-				SUB(memory[H << 8 | L] + Cb);
+				SUB(memory[H << 8 | L], true);
 				PC += 1;
 				break;
 
 			case 0x0F: // SBC A, A
-				SUB(A + Cb);
+				SUB(A, true);
 				PC += 1;
 				break;
 			}
@@ -2671,7 +2659,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x06: // ADD A, d8
-				ADD(A, memory[PC + 1]);
+				ADD(A, memory[PC + 1], false);
 				PC += 2;
 				break;
 
@@ -2722,7 +2710,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x0E: // ADC A, d8
-				ADD(A, memory[PC + 1] + Cb);
+				ADD(A, memory[PC + 1], true);
 				PC += 2;
 				break;
 
@@ -2788,7 +2776,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x06: // SUB d8
-				SUB(memory[PC + 1]);
+				SUB(memory[PC + 1], false);
 				PC += 2;
 				break;
 
@@ -2846,7 +2834,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x0E: // SBC A, d8
-				SUB(memory[PC + 1] + Cb);
+				SUB(memory[PC + 1], true);
 				PC += 2;
 				break;
 
@@ -2873,7 +2861,7 @@ void gb::emulateCycle()
 				PC += 1;
 				break;
 
-			case 0x02: // LD (C), A (IS ACTUALLY LDH??)
+			case 0x02: // LDH (C), A
 				memory[0xFF00+C] = A;
 				PC += 1;
 				break;
@@ -2907,13 +2895,12 @@ void gb::emulateCycle()
 				PC = 0x20;
 				break;
 
-			case 0x08: // ADD SP, r8 FIX THIS
-				printf("ADD SP, r8\n");
+			case 0x08: // ADD SP, r8
 				ADD(SP, signed char(memory[PC + 1]));
 				PC += 2;
 				break;
 
-			case 0x09: // JP HL              FINE
+			case 0x09: // JP HL
 				PC = (H << 8) | L;
 				break;
 
@@ -2951,15 +2938,15 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0xF0: // ???
+		case 0xF0:
 			switch (opcode & 0x0F)
 			{
-			case 0x00: // LDH A, (a8) IS ACTUALLY A16??
+			case 0x00: 
 				A = memory[0xFF00 + memory[PC + 1]];
 				PC += 2;
 				break;
 
-			case 0x01: // POP AF - IDK ANYMORE
+			case 0x01: // POP A
 				A = memory[SP + 1];
 				F = memory[SP] & 0xF0 | F & 0xF;
 				SP += 2;
@@ -2970,7 +2957,7 @@ void gb::emulateCycle()
 				Cb = (F >> 4) & 0x1;
 				break;
 
-			case 0x02: // LD A, (C) IS ACTUALLY LDH??
+			case 0x02: // LDH A, (C)
 				A = memory[0xFF00 + C];
 				PC += 1;
 				break;
@@ -3007,7 +2994,6 @@ void gb::emulateCycle()
 
 			case 0x08: // LD HL, SP + r8
 			{
-				printf("LD HL, SP + r8\n");
 				signed int val = memory[PC + 1];
 				unsigned int tempSP = SP;
 				ADD(tempSP, val);
@@ -3022,7 +3008,7 @@ void gb::emulateCycle()
 				PC += 1;
 				break;
 
-			case 0x0A: // LD A, (a16) - FIXING THIS FIXED 06 KEEP AN EYE OUT
+			case 0x0A: // LD A, (a16)
 			{
 				int addr = memory[PC + 2] << 8 | memory[PC + 1];
 				A = memory[addr];
@@ -3081,7 +3067,7 @@ void gb::setFlags()
 	modifyBit(F, Cb, 4);
 }
 
-// Set or reset a bit in a byte, at a given position. SEEMS TO WORK
+// Set or reset a bit in a byte, at a given position.
 void gb::modifyBit(unsigned char &r, int val, int pos)
 {
 	if (val == 0)
@@ -3103,15 +3089,13 @@ int gb::checkHalfCarry(unsigned char a, unsigned char b, int mode)
 		else
 			return 0;
 	else if (mode == -1)
-		if (((a & 0xf) - (b & 0xf)) < 0)
-		{
+		//if (((a & 0xf) - (b & 0xf)) < 0)
+		if ((a & 0xF) < (b & 0xF))
 			return 1;
-		}
 		else
 			return 0;
 }
 
-// No idea if this is correct :) Don't need mode probably
 int gb::checkHalfCarry(unsigned int a, unsigned int b, int mode)
 {
 	if (mode == 1)
@@ -3127,7 +3111,7 @@ int gb::checkHalfCarry(unsigned int a, unsigned int b, int mode)
 			return 0;
 }
 
-// Check if a value equals 0. Used to set the zero flag bit. WORKS
+// Check if a value equals 0. Used to set the zero flag bit.
 int gb::checkZero(unsigned char a)
 {
 	if (a == 0)
@@ -3136,7 +3120,7 @@ int gb::checkZero(unsigned char a)
 		return 0;
 }
 
-// Increment a byte. WORKS
+// Increment a byte.
 void gb::INC(unsigned char &val)
 {
 	Hb = checkHalfCarry(val, 0x1, 1);
@@ -3145,13 +3129,13 @@ void gb::INC(unsigned char &val)
 	Nb = 0;
 }
 
-// Increment a 16-bit value. WORKS
+// Increment a 16-bit value.
 void gb::INC(unsigned int &val)
 {
 	val += 1;
 }
 
-// Decrement a byte. WORKS
+// Decrement a byte.
 void gb::DEC(unsigned char &r)
 {
 	Hb = checkHalfCarry(r, 0x1, -1);
@@ -3160,13 +3144,13 @@ void gb::DEC(unsigned char &r)
 	Nb = 1;
 }
 
-// Decrement a 16-bit value. WORKS
+// Decrement a 16-bit value.
 void gb::DEC(unsigned int &val)
 {
 	val -= 1;
 }
 
-// Rotate the contents of a register left or right. Can rotate normally or through carry. SHOULD WORK
+// Rotate the contents of a register left or right. Can rotate normally or through carry.
 void gb::ROT(unsigned char dir, bool carry, unsigned char &r)
 {
 	unsigned int oldCb = Cb;
@@ -3228,22 +3212,59 @@ void gb::SHIFT(unsigned char mode, unsigned char &r)
 	Hb = 0;
 }
 
-// Adds a byte value to another byte, with or without adding the carry bit. SHOULD WORK
-void gb::ADD(unsigned char &val1, unsigned char val2)
+// Adds a byte value to another byte, with or without adding the carry bit.
+void gb::ADD(unsigned char &val1, unsigned char val2, bool carry)
 {
-	if (val1 > (0xFF - val2))
+	if (carry)
+	{
+		unsigned char toAdd = val2 + Cb;
+		if (val2 == 0xFF && Cb == 1)
+		{
+			Cb = 1;
+		}
+		else
+		{
+			if ((val1 & 0xF) + (val2 & 0xF) + Cb > 0xF)
+				Hb = 1;
+			else
+				Hb = 0;
+
+			if (val1 > (0xFF - val2 - Cb))
+			{
+				Cb = 1;
+			}
+			else
+			{
+				Cb = 0;
+			}
+		}	
+		val1 += toAdd;
+	}
+	else
+	{
+		if (val1 > (0xFF - val2))
+			Cb = 1;
+		else
+			Cb = 0;
+		Hb = checkHalfCarry(val1, val2, 1);
+		val1 += val2;
+	}
+	Zb = checkZero(val1);
+	Nb = 0;
+
+
+	/*if (val1 > (0xFF - val2))
 		Cb = 1;
 	else
 		Cb = 0;
 	Hb = checkHalfCarry(val1, val2, 1);
 	val1 += val2;
 	Zb = checkZero(val1);
-	Nb = 0;
+	Nb = 0;*/
 }
 
 // Adds a 16-bit value to another 16-bit value.
 // NOTE: Maybe write method for half-carry with two 16-bit values?
-// SHOULD WORK
 void gb::ADD(unsigned int &val1, unsigned int val2)
 {
 	if (val1 > (unsigned int(0xFFFF) - val2))
@@ -3281,15 +3302,48 @@ void gb::ADD(unsigned int &val1, signed int val2)
 	Zb = 0;
 }
 
-void gb::SUB(unsigned char val)
+void gb::SUB(unsigned char val, bool carry)
 {
-	if (val > A)
-		Cb = 1;
-	else
-		Cb = 0;
 
-	Hb = checkHalfCarry(A, val, -1);
-	A -= val;
+	if (carry)
+	{
+		unsigned char toSubtract = val + Cb;
+		if (val == 0xFF && Cb == 1)
+		{
+			Cb = 1;
+		}
+		else
+		{
+			// Half carry check
+			if ((A & 0xF) - (val & 0xF) - Cb < 0)
+				Hb = 1;
+			else
+				Hb = 0;
+			
+			if (val + Cb > A)
+			{
+				Cb = 1;
+			}
+				
+			else
+			{
+				Cb = 0;
+			}
+			
+		}
+		A -= toSubtract;
+	}
+
+	else
+	{
+		Hb = checkHalfCarry(A, val, -1);
+		if (val > A)
+			Cb = 1;
+		else
+			Cb = 0;
+		A -= val;
+	}
+	
 	Zb = checkZero(A);
 	Nb = 1;
 }
@@ -3333,7 +3387,7 @@ void gb::CP(unsigned char val)
 	Nb = 1;
 }
 
-void gb::CALL() // SHOULD WORK
+void gb::CALL()
 {
 	memory[SP - 1] = (PC + 3) >> 8;
 	memory[SP - 2] = (PC + 3) & 0xFF;
@@ -3353,7 +3407,7 @@ void gb::SWAP(unsigned char &val) // WORKS
 	Cb = 0;
 }
 
-void gb::BIT(unsigned char pos, unsigned char r) // SHOULD WORK
+void gb::BIT(unsigned char pos, unsigned char r)
 {
 	unsigned char bit = (r >> pos) & 0x1;
 	if (bit == 0)
@@ -3366,13 +3420,12 @@ void gb::BIT(unsigned char pos, unsigned char r) // SHOULD WORK
 
 // Returns the result of combining two 8-bit register values together.
 // NOTE: Maybe use for combining values in memory as well?
-// SHOULD WORK
 int gb::combineReg(unsigned char r1, unsigned char r2)
 {
 	return (r1 << 8) | r2;
 }
 
-// Splits a 16-bit register into two, and stores the resulting bytes in two other registers. SHOULD WORK
+// Splits a 16-bit register into two, and stores the resulting bytes in two other registers.
 void gb::splitReg(unsigned char &r1, unsigned char &r2, unsigned int r3)
 {
 	r1 = r3 >> 8 & 0xFF;

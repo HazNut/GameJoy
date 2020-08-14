@@ -30,10 +30,10 @@ public:
 	void DEC(unsigned int &val);
 	void ROT(unsigned char dir, bool carry, unsigned char &r); // Rotate a byte normally or through carry.
 	void SHIFT(unsigned char dir, unsigned char &r);
-	void ADD(unsigned char &val1, unsigned char val2); // Adds a byte to another byte.
+	void ADD(unsigned char &val1, unsigned char val2, bool carry); // Adds a byte to another byte.
 	void ADD(unsigned int &r1, unsigned int r2); // Adds a 16-bit value to another 16-bit value.
 	void ADD(unsigned int& val1, signed int val2);
-	void SUB(unsigned char val);
+	void SUB(unsigned char val, bool carry);
 	void AND(unsigned char val);
 	void XOR(unsigned char val);
 	void OR(unsigned char val);
