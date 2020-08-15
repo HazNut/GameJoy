@@ -56,9 +56,6 @@ void gb::initialize()
 	memory[0xFF40] = 0x91;
 	memory[0xFF42] = 0x00;
 	memory[0xFF43] = 0x00;
-
-	memory[0xFF44] = 144; // VBLANK
-
 	memory[0xFF45] = 0x00;
 	memory[0xFF47] = 0xFC;
 	memory[0xFF48] = 0xFF;
@@ -76,7 +73,7 @@ void gb::loadGame()
 	streampos size;
 	char* memblock;
 
-	ifstream file("individual/01-special.gb", ios::in | ios::binary | ios::ate);
+	ifstream file("individual/05-op rp.gb", ios::in | ios::binary | ios::ate);
 	if (file.is_open())
 	{
 		size = file.tellg();
@@ -862,7 +859,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x0C: // RES 1, H
-				modifyBit(F, 0, 1);
+				modifyBit(H, 0, 1);
 				PC += 1;
 				break;
 
