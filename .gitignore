@@ -345,3 +345,6 @@ SDL/
 # ROMs
 gb/individual
 gb/source
+
+# readme
+README.md

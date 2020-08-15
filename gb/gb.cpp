@@ -2664,6 +2664,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x07: // RST 00H
+				PC += 1;
 				memory[SP - 1] = PC >> 8;
 				memory[SP - 2] = PC & 0xFF;
 				SP -= 2;
@@ -2715,6 +2716,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x0F: // RST 08H
+				PC += 1;
 				memory[SP - 1] = PC >> 8;
 				memory[SP - 2] = PC & 0xFF;
 				SP -= 2;
@@ -2781,6 +2783,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x07: // RST 10H
+				PC += 1;
 				memory[SP - 1] = PC >> 8;
 				memory[SP - 2] = PC & 0xFF;
 				SP -= 2;
@@ -2839,8 +2842,10 @@ void gb::emulateCycle()
 				break;
 
 			case 0x0F: // RST 18H
+				PC += 1;
 				memory[SP - 1] = PC >> 8;
 				memory[SP - 2] = PC & 0xFF;
+				SP -= 2;
 				PC = 0x18;
 				break;
 			}
@@ -2889,6 +2894,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x07: // RST 20H
+				PC += 1;
 				memory[SP - 1] = PC >> 8;
 				memory[SP - 2] = PC & 0xFF;
 				SP -= 2;
@@ -2930,6 +2936,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x0F: // RST 28H
+				PC += 1;
 				memory[SP - 1] = PC >> 8;
 				memory[SP - 2] = PC & 0xFF;
 				SP -= 2;
@@ -2986,6 +2993,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x07: // RST 30H
+				PC += 1;
 				memory[SP - 1] = PC >> 8;
 				memory[SP - 2] = PC & 0xFF;
 				SP -= 2;
@@ -3038,6 +3046,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x0F: // RST 38H
+				PC += 1;
 				memory[SP - 1] = PC >> 8;
 				memory[SP - 2] = PC & 0xFF;
 				SP -= 2;
