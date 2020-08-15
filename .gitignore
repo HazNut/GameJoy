@@ -346,8 +346,5 @@ SDL/
 gb/individual
 gb/source
 
-# readme
-README.md
-
 # Log file
 gb/output.txt
