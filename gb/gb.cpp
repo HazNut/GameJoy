@@ -10,12 +10,15 @@ using namespace std;
 // Initialize the Game Boy by setting the register values.
 void gb::initialize()
 {
-	/*remove("output.txt");
-	fopen_s(&pFile, "output.txt", "a");*/
+	// Sets up log file.
+	remove("output.txt");
+	fopen_s(&pFile, "output.txt", "a");
 
+	// Sets all memory locations to zero.
 	for (int i = 0x0000; i <= 0xFFFF; i++)
 		memory[i] = 0x0;
 
+	// Set values of CPU registers.
 	A = 0x01;
 	F = 0xB0;
 	B = 0x00;
@@ -26,12 +29,13 @@ void gb::initialize()
 	L = 0x4D;
 	SP = 0xFFFE;
 
-	// Correct?
+	// Flag bits of F - F is updated with these values after instruction execution.
 	Zb = 1;
 	Nb = 0;
 	Hb = 1;
 	Cb = 1;
 
+	// Set values for I/O registers.
 	memory[0xFF05] = 0x00;
 	memory[0xFF06] = 0x00;
 	memory[0xFF07] = 0x00;
@@ -64,16 +68,16 @@ void gb::initialize()
 	memory[0xFF4B] = 0x00;
 	memory[0xFFFF] = 0x00;
 
-	PC = 0x100;
+	PC = 0x100; // Program counter starts at 0x100 after boot.
 }
 
-// Load the game.
+// Load a ROM.
 void gb::loadGame()
 {
 	streampos size;
 	char* memblock;
 
-	ifstream file("individual/05-op rp.gb", ios::in | ios::binary | ios::ate);
+	ifstream file("individual/02-interrupts.gb", ios::in | ios::binary | ios::ate);
 	if (file.is_open())
 	{
 		size = file.tellg();
@@ -93,29 +97,33 @@ void gb::loadGame()
 // Emulate a cycle of the Game Boy.
 void gb::emulateCycle()
 {
-	//printf("%X\n", 0xFF - (0xFF + 0));
-	// Get the opcode and execute the required instructions.
-	opcode = memory[PC];
-	char opcodeStr[3];
-	_itoa_s(opcode, opcodeStr, 16);
+	opcode = memory[PC]; // Get the current opcode.
+	char opcodeStr[3];   // Can store the opcode in a string so it can be printed.
+
+	// Print test output from the serial port.
 	if (memory[0xFF02] == 0x81)
 	{
 		printf("%c", memory[0xFF01]);
 		memory[0xFF02] = 0x01;
 	}
 
-	if (opcode == 0xCB)
+	if (opcode == 0xCB) // Some instructions are prefixed with CB.
 	{
+		// Get the opcode after the prefix.
 		PC += 1;
 		opcode = memory[PC];
+
+		// Print the current opcode and other info to the output log.
 		_itoa_s(opcode, opcodeStr, 16);
-		//printf("\nOpcode after prefix is %s, PC is %i. ZNHC = %i%i%i%i\n", opcodeStr, PC, Zb, Nb, Hb, Cb);
+		fprintf(pFile, "\nOpcode after prefix is %s, PC is %i. ZNHC = %i%i%i%i\n", opcodeStr, PC, Zb, Nb, Hb, Cb);
 		//printf("Next bytes are %X and %X\n", memory[PC + 1], memory[PC + 2]);
 		//printf("A = %X, B = %X, C = %X, D = %X, E = %X, F = %X, H = %X L = %X,\n", A, B, C, D, E, F, H, L);
 		//printf("HL = %X, BC = %X, DE = %X, SP = %X\n", combineReg(H, L), combineReg(B, C), combineReg(D, E), SP);*/
+
+		// Check each half of the opcode to get to the required instruction.
 		switch (opcode & 0xF0)
 		{
-		case 0x00:
+		case 0x00: // Rotations without carry.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // RLC B
@@ -200,7 +208,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0x10:
+		case 0x10: // Rotations with carry.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // RL B
@@ -285,7 +293,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0x20:
+		case 0x20: // Arithmetic shifts.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // SLA B
@@ -370,7 +378,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0x30:
+		case 0x30: // Swaps and logical right shifts.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // SWAP B
@@ -414,48 +422,48 @@ void gb::emulateCycle()
 				break;
 
 			case 0x08: // SRL B
-				SHIFT('A', B);
+				SHIFT('l', B);
 				PC += 1;
 				break;
 
 			case 0x09: // SRL C
-				SHIFT('A', C);
+				SHIFT('l', C);
 				PC += 1;
 				break;
 
 			case 0x0A: // SRL D
-				SHIFT('A', D);
+				SHIFT('l', D);
 				PC += 1;
 				break;
 
 			case 0x0B: // SRL E
-				SHIFT('A', E);
+				SHIFT('l', E);
 				PC += 1;
 				break;
 
 			case 0x0C: // SRL H
-				SHIFT('A', H);
+				SHIFT('l', H);
 				PC += 1;
 				break;
 
 			case 0x0D: // SRL L
-				SHIFT('A', L);
+				SHIFT('l', L);
 				PC += 1;
 				break;
 
 			case 0x0E: // SRL (HL)
-				SHIFT('A', memory[H << 8 | L]);
+				SHIFT('l', memory[H << 8 | L]);
 				PC += 1;
 				break;
 
 			case 0x0F: // SRL A
-				SHIFT('A', A);
+				SHIFT('l', A);
 				PC += 1;
 				break;
 			}
 			break;
 
-		case 0x40:
+		case 0x40: // Test bits 0 and 1.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // BIT 0, B
@@ -540,7 +548,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0x50:
+		case 0x50: // Test bits 2 and 3.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // BIT 2, B
@@ -625,7 +633,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0x60:
+		case 0x60: // Test bits 4 and 5.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // BIT 4, B
@@ -710,7 +718,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0x70:
+		case 0x70: // Test bits 6 and 7.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // BIT 6, B
@@ -795,7 +803,7 @@ void gb::emulateCycle()
 			}
 			break;
 		
-		case 0x80:
+		case 0x80: // Reset bits 0 and 1.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // RES 0, B
@@ -880,7 +888,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0x90:
+		case 0x90: // Reset bits 2 and 3.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // RES 2, B
@@ -965,7 +973,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0xA0:
+		case 0xA0: // Reset bits 4 and 5.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // RES 4, B
@@ -1050,7 +1058,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0xB0:
+		case 0xB0: // Reset bits 6 and 7.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // RES 6, B
@@ -1135,7 +1143,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0xC0:
+		case 0xC0: // Set bits 0 and 1.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // SET 0, B
@@ -1220,7 +1228,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0xD0:
+		case 0xD0: // Set bits 2 and 3.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // SET 2, B
@@ -1305,7 +1313,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0xE0:
+		case 0xE0: // Set bits 4 and 5.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // SET 4, B
@@ -1390,7 +1398,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0xF0:
+		case 0xF0: // Set bits 6 and 7.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // SET 6, B
@@ -1476,20 +1484,21 @@ void gb::emulateCycle()
 			break;
 		}
 	}
-	else
+	else // Some instructions are not prefixed.
 	{
-
-		/*printf("\nOpcode is %s, PC is %X. ZNHC = %i%i%i%i\n", opcodeStr, PC, Zb, Nb, Hb, Cb);	
-		printf("Next bytes are %X and %X\n", memory[PC + 1], memory[PC + 2]);
+		// Print out the opcode and other info to the log.
+		_itoa_s(opcode, opcodeStr, 16);
+		fprintf(pFile, "\nOpcode is %s, PC is %X. ZNHC = %i%i%i%i\n", opcodeStr, PC, Zb, Nb, Hb, Cb);	
+		/*printf("Next bytes are %X and %X\n", memory[PC + 1], memory[PC + 2]);
 		printf("A = %X, B = %X, C = %X, D = %X, E = %X, F = %X, H = %X L = %X,\n", A, B, C, D, E, F, H, L);
 		printf("HL = %X, BC = %X, DE = %X, SP = %X\n", combineReg(H, L), combineReg(B, C), combineReg(D, E), SP);*/
 
-		switch (opcode & 0xF0) // 8 bit instructions
+		switch (opcode & 0xF0) 
 		{
-		case 0x00: // Done.
+		case 0x00:
 			switch (opcode & 0x0F)
 			{
-			case 0x00: // NOP
+			case 0x00: 
 				PC += 1;
 				break;
 
@@ -1680,7 +1689,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0x20: // Done.
+		case 0x20:
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // JR NZ, r8
@@ -1806,7 +1815,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0x30: // Done.
+		case 0x30:
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // JR NC, r8
@@ -1922,7 +1931,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0x40: // Done.
+		case 0x40: // Loads into B and C.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // LD B, B
@@ -2007,7 +2016,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0x50: // Done.
+		case 0x50: // Loads into D and E.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // LD D, B
@@ -2092,7 +2101,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0x60: // Done.
+		case 0x60: // Loads into H and L.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // LD H, B
@@ -2177,7 +2186,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0x70: // Need to update HALT to do something.
+		case 0x70: // Loads into (HL) and A, also HALT.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // LD (HL), B
@@ -2262,7 +2271,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0x80: // Done.
+		case 0x80: // Adds and adds with carry.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // ADD A, B
@@ -2347,7 +2356,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0x90: // Done.
+		case 0x90: // Subtractions and subtractions with carry.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // SUB B
@@ -2432,7 +2441,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0xA0: // Done.
+		case 0xA0: // ANDs and XORs.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // AND B
@@ -2518,7 +2527,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0xB0: // Done.
+		case 0xB0:
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // OR B
@@ -2604,7 +2613,7 @@ void gb::emulateCycle()
 			}
 			break;
 
-		case 0xC0: // Done.
+		case 0xC0:
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // RET NZ
@@ -2661,11 +2670,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x07: // RST 00H
-				PC += 1;
-				memory[SP - 1] = PC >> 8;
-				memory[SP - 2] = PC & 0xFF;
-				SP -= 2;
-				PC = 0x0;
+				RST(0x0);
 				break;
 
 			case 0x08: // RET Z
@@ -2713,16 +2718,12 @@ void gb::emulateCycle()
 				break;
 
 			case 0x0F: // RST 08H
-				PC += 1;
-				memory[SP - 1] = PC >> 8;
-				memory[SP - 2] = PC & 0xFF;
-				SP -= 2;
-				PC = 0x08;
+				RST(0x08);
 				break;
 			}
 			break;
 
-		case 0xD0: // Done.
+		case 0xD0:
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // RET NC
@@ -2780,11 +2781,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x07: // RST 10H
-				PC += 1;
-				memory[SP - 1] = PC >> 8;
-				memory[SP - 2] = PC & 0xFF;
-				SP -= 2;
-				PC = 0x10;
+				RST(0x10);
 				break;
 
 			case 0x08: // RET C
@@ -2800,9 +2797,9 @@ void gb::emulateCycle()
 				break;
 
 			case 0x09: // RETI
+				EI();
 				PC = (memory[SP + 1] << 8) | memory[SP];
 				SP += 2;
-				IME = 1;
 				break;
 
 			case 0x0A: // JP C, a16
@@ -2839,16 +2836,12 @@ void gb::emulateCycle()
 				break;
 
 			case 0x0F: // RST 18H
-				PC += 1;
-				memory[SP - 1] = PC >> 8;
-				memory[SP - 2] = PC & 0xFF;
-				SP -= 2;
-				PC = 0x18;
+				RST(0x18);
 				break;
 			}
 			break;
 
-		case 0xE0: // ???
+		case 0xE0:
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // LDH (a8), A
@@ -2891,11 +2884,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x07: // RST 20H
-				PC += 1;
-				memory[SP - 1] = PC >> 8;
-				memory[SP - 2] = PC & 0xFF;
-				SP -= 2;
-				PC = 0x20;
+				RST(0x20);
 				break;
 
 			case 0x08: // ADD SP, r8
@@ -2933,11 +2922,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x0F: // RST 28H
-				PC += 1;
-				memory[SP - 1] = PC >> 8;
-				memory[SP - 2] = PC & 0xFF;
-				SP -= 2;
-				PC = 0x28;
+				RST(0x28);
 				break;
 			}
 			break;
@@ -2968,7 +2953,7 @@ void gb::emulateCycle()
 
 			case 0x03: // DI
 				//printf("DI\n");
-				IME = 0;
+				DI();
 				PC += 1;
 				break;
 
@@ -2990,11 +2975,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x07: // RST 30H
-				PC += 1;
-				memory[SP - 1] = PC >> 8;
-				memory[SP - 2] = PC & 0xFF;
-				SP -= 2;
-				PC = 0x30;
+				RST(0x30);
 				break;
 
 			case 0x08: // LD HL, SP + r8
@@ -3022,8 +3003,8 @@ void gb::emulateCycle()
 			}
 
 			case 0x0B: // EI
-				//printf("EI\n");
-				enableInterrupts = true;
+				cyclesBeforeEnableIME = 1;
+				scheduleIME = true;
 				PC += 1;
 				break;
 
@@ -3043,28 +3024,56 @@ void gb::emulateCycle()
 				break;
 
 			case 0x0F: // RST 38H
-				PC += 1;
-				memory[SP - 1] = PC >> 8;
-				memory[SP - 2] = PC & 0xFF;
-				SP -= 2;
-				PC = 0x38;
+				RST(0x38);
 				break;
 			}
 			break;
 		}
-
 	}
 	
-	setFlags();
-	if (enableInterrupts && opcode != 0x0B)
+	updateFlagReg(); // Update F with the new flag values.
+
+	// If scheduled to set the IME, check if it should occur on this cycle. If it should, set it, otherwise do it next cycle.
+	if (scheduleIME)
 	{
-		IME = 1;
-		enableInterrupts = false;
+		if (cyclesBeforeEnableIME == 1)
+			cyclesBeforeEnableIME = 0;
+		else
+		{
+			EI();
+		}		
 	}
+
+	// Handle interrupts
+	/*if (IME)
+	{
+		for (int i = 0; i < 5; i++)
+		{
+			if (((memory[0xFF0F] >> i) & 0x1) == 1)
+			{
+				if (((memory[0xFFFF] >> i) & 0x1) == 1)
+				{
+					modifyBit(memory[0xFF0F], 0, i);
+					DI();
+					PC += 1;
+					memory[SP - 1] = PC >> 8;
+					memory[SP - 2] = PC & 0xFF;
+					SP -= 2;
+					PC = intVectors[i];
+					break;
+
+				}
+
+
+			}
+		}
+	}
+	*/
+
 }
 
-// Set the values of the flag bits in register F.
-void gb::setFlags()
+// Updates F with the new flag values.
+void gb::updateFlagReg()
 {
 	// Set each flag bit to the value it should be in the register F.
 	modifyBit(F, Zb, 7);
@@ -3074,62 +3083,77 @@ void gb::setFlags()
 }
 
 // Set or reset a bit in a byte, at a given position.
-void gb::modifyBit(unsigned char &r, int val, int pos)
+void gb::modifyBit(unsigned char &val, int bitVal, int pos)
 {
-	if (val == 0)
+	// Bit masks are used to modify the value of the bit.
+	if (bitVal == 0)
 	{
-		r &= ~(0x1 << pos);
+		val &= ~(0x1 << pos);
 	}
-	else if (val == 1)
+	else if (bitVal == 1)
 	{
-		r |= 0x1 << pos;
+		val |= 0x1 << pos;
 	}
 }
 
 // Check if the half-carry bit should be set for an addition/subtraction of two bytes.
-int gb::checkHalfCarry(unsigned char a, unsigned char b, int mode)
+int gb::checkHalfCarry(unsigned char a, unsigned char b, char mode)
 {
-	if (mode == 1)
+	if (mode == '+')
 		if (((a & 0xF) + (b & 0xF)) > 0xF)
 			return 1;
 		else
 			return 0;
-	else if (mode == -1)
-		//if (((a & 0xf) - (b & 0xf)) < 0)
+
+	else if (mode == '-')
 		if ((a & 0xF) < (b & 0xF))
 			return 1;
 		else
 			return 0;
 }
 
-int gb::checkHalfCarry(unsigned int a, unsigned int b, int mode)
+// Check if the half-carry bit should be set for an addition/subtraction of two 16-bit values.
+int gb::checkHalfCarry(unsigned int val1, unsigned int val2, char mode)
 {
-	if (mode == 1)
-		if (((a & 0xfff) + (b & 0xfff)) > 0xFFF)
+	if (mode == '+')
+		if (((val1 & 0xFFF) + (val2 & 0xFFF)) > 0xFFF)
 			return 1;
 		else
 			return 0;
-	else if (mode == -1)
-		// if (((a & 0xfff) - (b & 0xfff)) < 0xfff)
-		if (((a & 0xfff) - (b & 0xfff)) < 0xfff)
+
+	else if (mode == '-')
+		if (((val1 & 0xFFF) - (val2 & 0xFFF)) < 0xFFF)
 			return 1;
 		else
 			return 0;
 }
 
-// Check if a value equals 0. Used to set the zero flag bit.
-int gb::checkZero(unsigned char a)
+// Check if the zero flag should be set based on a input value.
+int gb::checkZero(unsigned char val)
 {
-	if (a == 0)
+	if (val == 0)
 		return 1;
 	else
 		return 0;
 }
 
+// Returns the 16-bit value when combining two 8-bit register values together.
+int gb::combineReg(unsigned char reg1, unsigned char reg2)
+{
+	return (reg1 << 8) | reg2;
+}
+
+// Puts the value in a 16-bit register back into the two original registers.
+void gb::splitReg(unsigned char& reg1, unsigned char& reg2, unsigned int reg3)
+{
+	reg1 = reg3 >> 8 & 0xFF;
+	reg2 = reg3 & 0xFF;
+}
+
 // Increment a byte.
 void gb::INC(unsigned char &val)
 {
-	Hb = checkHalfCarry(val, 0x1, 1);
+	Hb = checkHalfCarry(val, 0x1, '+');
 	val += 1;
 	Zb = checkZero(val);
 	Nb = 0;
@@ -3142,11 +3166,11 @@ void gb::INC(unsigned int &val)
 }
 
 // Decrement a byte.
-void gb::DEC(unsigned char &r)
+void gb::DEC(unsigned char &val)
 {
-	Hb = checkHalfCarry(r, 0x1, -1);
-	r -= 1;
-	Zb = checkZero(r);
+	Hb = checkHalfCarry(val, 0x1, '-');
+	val -= 1;
+	Zb = checkZero(val);
 	Nb = 1;
 }
 
@@ -3154,68 +3178,6 @@ void gb::DEC(unsigned char &r)
 void gb::DEC(unsigned int &val)
 {
 	val -= 1;
-}
-
-// Rotate the contents of a register left or right. Can rotate normally or through carry.
-void gb::ROT(unsigned char dir, bool carry, unsigned char &r)
-{
-	unsigned int oldCb = Cb;
-	if (dir == 'L')
-	{
-		Cb = (r >> 7) & 0x1;
-		r <<= 1;
-		if (carry)
-			modifyBit(r, oldCb, 0);
-		else
-			modifyBit(r, Cb, 0);
-	}
-	else if (dir == 'R')
-	{
-		Cb = r & 0x1;
-		r >>= 1;
-		if (carry)
-			modifyBit(r, oldCb, 7);
-		else
-			modifyBit(r, Cb, 7);
-	}
-
-	if (r == 0)
-		Zb = 1;
-	else
-		Zb = 0;
-	Nb = 0;
-	Hb = 0;
-}
-
-// Shift the contents of a register left or right.
-void gb::SHIFT(unsigned char mode, unsigned char &r)
-{
-	if (mode == 'L')
-	{
-		Cb = (r >> 7) & 0x1;
-		r <<= 1;
-	}
-	else if (mode == 'R')
-	{
-		Cb = r & 0x1;
-		r >>= 1;
-		if (((r >> 6) & 0x1) == 0)
-			modifyBit(r, 0, 7);
-		else
-			modifyBit(r, 1, 7);
-	}
-	else if (mode == 'A')
-	{
-		Cb = r & 0x1;
-		r >>= 1;
-	}
-
-	if (r == 0)
-		Zb = 1;
-	else
-		Zb = 0;
-	Nb = 0;
-	Hb = 0;
 }
 
 // Adds a byte value to another byte, with or without adding the carry bit.
@@ -3252,7 +3214,7 @@ void gb::ADD(unsigned char &val1, unsigned char val2, bool carry)
 			Cb = 1;
 		else
 			Cb = 0;
-		Hb = checkHalfCarry(val1, val2, 1);
+		Hb = checkHalfCarry(val1, val2, '+');
 		val1 += val2;
 	}
 	Zb = checkZero(val1);
@@ -3263,14 +3225,13 @@ void gb::ADD(unsigned char &val1, unsigned char val2, bool carry)
 		Cb = 1;
 	else
 		Cb = 0;
-	Hb = checkHalfCarry(val1, val2, 1);
+	Hb = checkHalfCarry(val1, val2, '+');
 	val1 += val2;
 	Zb = checkZero(val1);
 	Nb = 0;*/
 }
 
 // Adds a 16-bit value to another 16-bit value.
-// NOTE: Maybe write method for half-carry with two 16-bit values?
 void gb::ADD(unsigned int &val1, unsigned int val2)
 {
 	if (val1 > (unsigned int(0xFFFF) - val2))
@@ -3278,36 +3239,26 @@ void gb::ADD(unsigned int &val1, unsigned int val2)
 	else
 		Cb = 0;
 
-	Hb = checkHalfCarry(val1, val2, 1);
+	Hb = checkHalfCarry(val1, val2, '+');
 	val1 += val2;
 	Nb = 0;
 }
 
-void gb::ADD(unsigned int &val1, signed int val2)
+// Adds a signed 8-bit value to an unsigned 16-bit value.
+void gb::ADD(unsigned int &val1, signed char val2)
 {
-	if (val2 >= 0)
-	{
-		if (val1 > (unsigned int(0xFFFF) - unsigned int(val2)))
-			Cb = 1;
-		else
-			Cb = 0;
-
-		Hb = checkHalfCarry(val1, unsigned int(val2), 1);
-	}
+	if (val1 > (0xFF - val2))
+		Cb = 1;
 	else
-	{
-		if (unsigned int(~val2+1) > val1)
-			Cb = 1;
-		else
-			Cb = 0;
-		Hb = checkHalfCarry(val1, unsigned int(~val2 + 1), -1);
-	}
+		Cb = 0;
+	Hb = checkHalfCarry(val1, val2, '+');
 	
 	val1 += val2;
 	Nb = 0;
 	Zb = 0;
 }
 
+// Subtract an 8-bit value from A, along with the carry bit if required.
 void gb::SUB(unsigned char val, bool carry)
 {
 
@@ -3342,7 +3293,7 @@ void gb::SUB(unsigned char val, bool carry)
 
 	else
 	{
-		Hb = checkHalfCarry(A, val, -1);
+		Hb = checkHalfCarry(A, val, '-');
 		if (val > A)
 			Cb = 1;
 		else
@@ -3354,6 +3305,7 @@ void gb::SUB(unsigned char val, bool carry)
 	Nb = 1;
 }
 
+// ANDs A with a value.
 void gb::AND(unsigned char val)
 {
 	A &= val;
@@ -3363,6 +3315,7 @@ void gb::AND(unsigned char val)
 	Cb = 0;
 }
 
+// XORs A with a value.
 void gb::XOR(unsigned char val)
 {
 	A ^= val;
@@ -3372,6 +3325,7 @@ void gb::XOR(unsigned char val)
 	Cb = 0;
 }
 
+// ORs A with a value.
 void gb::OR(unsigned char val)
 {
 	A |= val;
@@ -3381,38 +3335,88 @@ void gb::OR(unsigned char val)
 	Cb = 0;
 }
 
+// Sets the flags for a subtraction of an 8-bit value from A, without storing the result.
 void gb::CP(unsigned char val)
 {	
-	if (val > A)
-		Cb = 1;
-	else
-		Cb = 0;
-
-	Hb = checkHalfCarry(A, val, -1);
+	Cb = val > A;
+	Hb = checkHalfCarry(A, val, '-');
 	Zb = checkZero(A - val);
 	Nb = 1;
 }
 
-void gb::CALL()
+// Rotate a byte left or right. Can rotate normally or through carry.
+void gb::ROT(unsigned char mode, bool carry, unsigned char& val)
 {
-	memory[SP - 1] = (PC + 3) >> 8;
-	memory[SP - 2] = (PC + 3) & 0xFF;
-	PC = (memory[PC + 2] << 8) | memory[PC + 1];
-	SP -= 2;
-}
+	unsigned int oldCb = Cb;
 
-void gb::SWAP(unsigned char &val) // WORKS
-{
-	val = val << 4 | val >> 4;
-	if (val == 0)
-		Zb = 1;
-	else
-		Zb = 0;
+	// Check which direction we are rotating in.
+	if (mode == 'L')
+	{
+		Cb = (val >> 7) & 0x1; // New carry bit is the bit rotated out.
+		val <<= 1;             // Rotate left.
+
+		// If rotating through carry, set the rightmost bit to the old carry bit value.
+		if (carry)
+			modifyBit(val, oldCb, 0);
+
+		// If not rotating through carry, we set the rightmost bit to the bit rotated out (same as carry bit).
+		else
+			modifyBit(val, Cb, 0);
+	}
+
+	// Similar procedure when rotating right.
+	else if (mode == 'R')
+	{
+		Cb = val & 0x1;
+		val >>= 1;
+
+		if (carry)
+			modifyBit(val, oldCb, 7);
+
+		else
+			modifyBit(val, Cb, 7);
+	}
+
+	Zb = checkZero(val);
 	Nb = 0;
 	Hb = 0;
-	Cb = 0;
 }
 
+// Shift a bit left or right, or right logically.
+void gb::SHIFT(unsigned char mode, unsigned char& r)
+{
+
+	// Check which direction we are shifting.
+	if (mode == 'L')
+	{
+		// Get the carry bit and shift left.
+		Cb = (r >> 7) & 0x1;
+		r <<= 1;
+	}
+
+	else if (mode == 'R')
+	{
+		// Get the carry bit and shift right.
+		Cb = r & 0x1;
+		r >>= 1;
+
+		// The 7th bit's value is retained after the shift, so set it to the 6th bit's value.
+		modifyBit(r, (r >> 6) & 0x1, 7);
+	}
+
+	// Can also shift right logically.
+	else if (mode == 'l')
+	{
+		Cb = r & 0x1;
+		r >>= 1;
+	}
+
+	Zb = checkZero(r);
+	Nb = 0;
+	Hb = 0;
+}
+
+// Checks the value of a given bit in a byte, and sets the zero flag if it is zero.
 void gb::BIT(unsigned char pos, unsigned char r)
 {
 	unsigned char bit = (r >> pos) & 0x1;
@@ -3424,16 +3428,50 @@ void gb::BIT(unsigned char pos, unsigned char r)
 	Hb = 1;
 }
 
-// Returns the result of combining two 8-bit register values together.
-// NOTE: Maybe use for combining values in memory as well?
-int gb::combineReg(unsigned char r1, unsigned char r2)
+// Swaps the upper and lower nibbles of a byte.
+void gb::SWAP(unsigned char& val)
 {
-	return (r1 << 8) | r2;
+	val = val << 4 | val >> 4;
+	Zb = checkZero(val);
+	Nb = 0;
+	Hb = 0;
+	Cb = 0;
 }
 
-// Splits a 16-bit register into two, and stores the resulting bytes in two other registers.
-void gb::splitReg(unsigned char &r1, unsigned char &r2, unsigned int r3)
+// Calls the next address in memory.
+void gb::CALL()
 {
-	r1 = r3 >> 8 & 0xFF;
-	r2 = r3 & 0xFF;
+	// Push the next instruction onto the stack.
+	memory[SP - 1] = (PC + 3) >> 8;
+	memory[SP - 2] = (PC + 3) & 0xFF;
+	SP -= 2;
+
+	// Jump to the address.
+	PC = (memory[PC + 2] << 8) | memory[PC + 1];
+}
+
+// Calls the given address.
+void gb::RST(char vec)
+{
+	PC += 1;
+	memory[SP - 1] = PC >> 8;
+	memory[SP - 2] = PC & 0xFF;
+	SP -= 2;
+	PC = vec;
+}
+
+// Enable interrupts.
+void gb::EI()
+{
+	IME = 1;
+	scheduleIME = false;
+	cyclesBeforeEnableIME = 1;
+}
+
+// Disable interrupts.
+void gb::DI()	
+{
+	IME = 0;
+	scheduleIME = false;
+	cyclesBeforeEnableIME = 1;
 }
