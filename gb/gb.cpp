@@ -77,7 +77,7 @@ void gb::loadGame()
 	streampos size;
 	char* memblock;
 
-	ifstream file("individual/10-bit ops.gb", ios::in | ios::binary | ios::ate);
+	ifstream file("individual/01-special.gb", ios::in | ios::binary | ios::ate);
 	if (file.is_open())
 	{
 		size = file.tellg();
@@ -1743,16 +1743,27 @@ void gb::emulateCycle()
 
 			case 0x07: // DAA
 			{
-				if (A > 99)
-					Cb = 1;
+				if (Nb == 0)
+				{
+					if (A > 0x99 || Cb == 1)
+					{
+						A += 0x60;
+						Cb = 1;
+					}
+					if (((A & 0xF) > 0x9) || Hb == 1)
+						A += 0x6;
+				}
 				else
-					Cb = 0;
+				{
+					if (Cb == 1)
+						A -= 0x60;
+					if (Hb == 1)
+						A -= 0x6;
+				}
+
 				Zb = checkZero(A);
 				Hb = 0;
-				unsigned char d1 = A % 10;
-				A /= 10;
-				unsigned char d2 = A % 10;
-				A = (d2 << 4) | d1;
+
 				PC += 1;
 			}
 
@@ -3180,52 +3191,27 @@ void gb::DEC(unsigned int &val)
 // Adds a byte value to another byte, with or without adding the carry bit.
 void gb::ADD(unsigned char &val1, unsigned char val2, bool carry)
 {
+	// Adding the carry bit along with the given value.
 	if (carry)
 	{
-		unsigned char toAdd = val2 + Cb;
-		if (val2 == 0xFF && Cb == 1)
-		{
-			Cb = 1;
-		}
-		else
-		{
-			if ((val1 & 0xF) + (val2 & 0xF) + Cb > 0xF)
-				Hb = 1;
-			else
-				Hb = 0;
+		/*The value of the carry bit is calculated before adding. However, we need to add the carry bit after, so we
+		store the new value here and update the carry bit after adding.*/
+		unsigned char newCb = (val1 > (0xFF - val2 - Cb));
+	
+		Hb = (((val1 & 0xF) + (val2 & 0xF) + Cb) > 0xF);
+		val1 += val2 + Cb;
+		Cb = newCb;
+	}	
 
-			if (val1 > (0xFF - val2 - Cb))
-			{
-				Cb = 1;
-			}
-			else
-			{
-				Cb = 0;
-			}
-		}	
-		val1 += toAdd;
-	}
+	// Adding without the carry bit.
 	else
 	{
-		if (val1 > (0xFF - val2))
-			Cb = 1;
-		else
-			Cb = 0;
+		Cb = val1 > (0xFF - val2);
 		Hb = checkHalfCarry(val1, val2, '+');
 		val1 += val2;
 	}
 	Zb = checkZero(val1);
 	Nb = 0;
-
-
-	/*if (val1 > (0xFF - val2))
-		Cb = 1;
-	else
-		Cb = 0;
-	Hb = checkHalfCarry(val1, val2, '+');
-	val1 += val2;
-	Zb = checkZero(val1);
-	Nb = 0;*/
 }
 
 // Adds a 16-bit value to another 16-bit value.
@@ -3258,46 +3244,26 @@ void gb::ADD(unsigned int &val1, signed char val2)
 // Subtract an 8-bit value from A, along with the carry bit if required.
 void gb::SUB(unsigned char val, bool carry)
 {
-
+	// Subtracting the given value and the carry bit.
 	if (carry)
 	{
-		unsigned char toSubtract = val + Cb;
-		if (val == 0xFF && Cb == 1)
-		{
-			Cb = 1;
-		}
-		else
-		{
-			// Half carry check
-			if ((A & 0xF) - (val & 0xF) - Cb < 0)
-				Hb = 1;
-			else
-				Hb = 0;
-			
-			if (val + Cb > A)
-			{
-				Cb = 1;
-			}
-				
-			else
-			{
-				Cb = 0;
-			}
-			
-		}
-		A -= toSubtract;
+		/*The value of the carry bit is calculated before subtracting. However, we need to subtract the carry bit after, so we
+		store the new value here and update the carry bit after subtracting.*/
+		unsigned char newCb = (val + Cb > A);
+
+		Hb = (((A & 0xF) < (val & 0xF) + Cb));
+		A = A - val - Cb;
+		Cb = newCb;
 	}
 
+	// Subtracting without the carry bit.
 	else
 	{
+		Cb = val > A;
 		Hb = checkHalfCarry(A, val, '-');
-		if (val > A)
-			Cb = 1;
-		else
-			Cb = 0;
 		A -= val;
 	}
-	
+
 	Zb = checkZero(A);
 	Nb = 1;
 }

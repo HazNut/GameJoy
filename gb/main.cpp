@@ -4,17 +4,17 @@
 
 gb myGB;
 
-void drawTile(SDL_Renderer* renderer, int memLocation, int x, int y, bool wrap)
+void drawTile(SDL_Renderer* renderer, int memLocation, int x, int y, bool wrap, int currLine)
 {
 	for (int byte = 0; byte < 15; byte += 2)
 	{
-		char lowByte = myGB.memory[memLocation + byte];
-		char highByte = myGB.memory[memLocation + byte + 1];
+		unsigned char lowByte = myGB.memory[memLocation + byte];
+		unsigned char highByte = myGB.memory[memLocation + byte + 1];
 		for (int bit = 0; bit < 8; bit++)
 		{
-			char lowBit = (lowByte >> (7 - bit)) & 0x1;
-			char highBit = (highByte >> (7 - bit)) & 0x1;
-			int total = lowBit | (highBit << 1);
+			unsigned char lowBit = (lowByte >> (7 - bit)) & 0x1;
+			unsigned char highBit = (highByte >> (7 - bit)) & 0x1;
+			unsigned int total = lowBit | (highBit << 1);
 
 			switch (total)
 			{
@@ -53,7 +53,7 @@ void drawTile(SDL_Renderer* renderer, int memLocation, int x, int y, bool wrap)
 	}
 }
 
-void displayBackground(SDL_Renderer* renderer)
+void displayBackground(SDL_Renderer* renderer, int currLine)
 {
 	int scrollY = myGB.memory[0xFF42];
 	int scrollX = myGB.memory[0xFF43];
@@ -76,11 +76,11 @@ void displayBackground(SDL_Renderer* renderer)
 			tileStartByte = 0x8800 + signed char (tileNumber);
 		else
 			tileStartByte = 0x8000 + tileNumber;
-		drawTile(renderer, tileStartByte, tile * 8, (tile / 32) * 8, true);
+		drawTile(renderer, tileStartByte, tile * 8, (tile / 32) * 8, true, currLine);
 	}
 }
 
-void displayWindow(SDL_Renderer* renderer)
+void displayWindow(SDL_Renderer* renderer, int currLine)
 {
 	int windowX = myGB.memory[0xFF4B];
 	int windowY = myGB.memory[0xFF4A];
@@ -104,11 +104,11 @@ void displayWindow(SDL_Renderer* renderer)
 		else
 			tileStartByte = 0x8000 + tileNumber;
 
-		drawTile(renderer, tileStartByte, windowX + (tile * 8), windowY + ((tile / 32) * 8), false);
+		drawTile(renderer, tileStartByte, windowX + (tile * 8), windowY + ((tile / 32) * 8), false, currLine);
 	}
 }
 
-void drawSprites(SDL_Renderer* renderer)
+void drawSprites(SDL_Renderer* renderer, int currLine)
 {
 
 	for (int sprite = 0; sprite < 40; sprite++)
@@ -118,41 +118,68 @@ void drawSprites(SDL_Renderer* renderer)
 		int spriteY = myGB.memory[0xFE00 + (sprite * 4)] + 16;
 		char tileStartByte = 0x8000 + spriteNumber;
 
-		drawTile(renderer, tileStartByte, spriteX, spriteY, false);
+		drawTile(renderer, tileStartByte, spriteX, spriteY, false, currLine);
 	}
 }
 
 int main(int argc, char** argv)
-{
+{/*
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_Window *win = SDL_CreateWindow("GameJoy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160, 144, SDL_WINDOW_SHOWN);
 	SDL_Renderer* renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-	SDL_Event e;
+	SDL_Surface* surf = SDL_CreateRGBSurface(0, 256, 256, 32, 0, 0, 0, 0);
+	SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surf);
+	SDL_SetRenderTarget(renderer, texture);
+	
+	SDL_Event e;*/
 
 	// Set up the Game Boy and load the game.
 	myGB.initialize();
 	myGB.loadGame();
-	int ticks = 0;
+
+
+	int ticks = 0; // Every 1000 cycles, get SDL events.
+	unsigned char LY;  // Stores LY.
+
 	// Keep emulating CPU cycles.
 	for (;;)
 	{
-		ticks += 1;
 		myGB.emulateCycle();
-		SDL_RenderClear(renderer);
-		//displayBackground(renderer);
-		//displayWindow(renderer);
-		//drawSprites(renderer);
-		SDL_RenderPresent(renderer);
-	
+		
+		/*LY = myGB.memory[0xFF44];
+		
+		if (LY < 0x90)
+		{
+			SDL_Rect r{ 0, LY, 160, 1 };
+			SDL_RenderCopy(renderer, texture, &r, &r);
+			SDL_RenderPresent(renderer);
+		}
+
+		if (myGB.memory[0xFF44] == 0x90)
+		{
+			displayBackground(renderer, LY);
+			displayWindow(renderer, LY);
+			drawSprites(renderer, LY);
+			
+			SDL_RenderClear(renderer);
+		}*/
+
+		myGB.memory[0xFF44] += 1;
+
+		if (myGB.memory[0xFF44] == 0x99)
+			myGB.memory[0xFF44] = 0x0;
+
+	/*	ticks += 1;
+
 		if (ticks == 1000)
 		{
-			while (SDL_PollEvent(&e) != 0)
+			while (SDL_PollEvent(&e))
 			{
-				break;
+				1;
 			}
 			ticks = 0;
 		}
-		myGB.memory[0xFF44] = 0x94;
+				*/
 	}
-		
+
 }
