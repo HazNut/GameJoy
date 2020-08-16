@@ -11,8 +11,8 @@ using namespace std;
 void gb::initialize()
 {
 	// Sets up log file.
-	remove("output.txt");
-	fopen_s(&pFile, "output.txt", "a");
+	//remove("output.txt");
+	//fopen_s(&pFile, "output.txt", "a");
 
 	// Sets all memory locations to zero.
 	for (int i = 0x0000; i <= 0xFFFF; i++)
@@ -77,7 +77,7 @@ void gb::loadGame()
 	streampos size;
 	char* memblock;
 
-	ifstream file("individual/02-interrupts.gb", ios::in | ios::binary | ios::ate);
+	ifstream file("individual/04-op r,imm.gb", ios::in | ios::binary | ios::ate);
 	if (file.is_open())
 	{
 		size = file.tellg();
@@ -115,10 +115,10 @@ void gb::emulateCycle()
 
 		// Print the current opcode and other info to the output log.
 		_itoa_s(opcode, opcodeStr, 16);
-		fprintf(pFile, "\nOpcode after prefix is %s, PC is %i. ZNHC = %i%i%i%i\n", opcodeStr, PC, Zb, Nb, Hb, Cb);
-		//printf("Next bytes are %X and %X\n", memory[PC + 1], memory[PC + 2]);
-		//printf("A = %X, B = %X, C = %X, D = %X, E = %X, F = %X, H = %X L = %X,\n", A, B, C, D, E, F, H, L);
-		//printf("HL = %X, BC = %X, DE = %X, SP = %X\n", combineReg(H, L), combineReg(B, C), combineReg(D, E), SP);*/
+		//fprintf(pFile, "\nOpcode after prefix is %s, PC is %i. ZNHC = %i%i%i%i\n", opcodeStr, PC, Zb, Nb, Hb, Cb);
+		//fprintf(pFile, "Next bytes are %X and %X\n", memory[PC + 1], memory[PC + 2]);
+		//fprintf(pFile, "A = %X, B = %X, C = %X, D = %X, E = %X, F = %X, H = %X L = %X, LY = %X\n", A, B, C, D, E, F, H, L, memory[0xFF44]);
+		//fprintf(pFile, "HL = %X, BC = %X, DE = %X, SP = %X\n", combineReg(H, L), combineReg(B, C), combineReg(D, E), SP);
 
 		// Check each half of the opcode to get to the required instruction.
 		switch (opcode & 0xF0)
@@ -1488,10 +1488,10 @@ void gb::emulateCycle()
 	{
 		// Print out the opcode and other info to the log.
 		_itoa_s(opcode, opcodeStr, 16);
-		fprintf(pFile, "\nOpcode is %s, PC is %X. ZNHC = %i%i%i%i\n", opcodeStr, PC, Zb, Nb, Hb, Cb);	
-		/*printf("Next bytes are %X and %X\n", memory[PC + 1], memory[PC + 2]);
-		printf("A = %X, B = %X, C = %X, D = %X, E = %X, F = %X, H = %X L = %X,\n", A, B, C, D, E, F, H, L);
-		printf("HL = %X, BC = %X, DE = %X, SP = %X\n", combineReg(H, L), combineReg(B, C), combineReg(D, E), SP);*/
+		//fprintf(pFile, "\nOpcode is %s, PC is %X. ZNHC = %i%i%i%i\n", opcodeStr, PC, Zb, Nb, Hb, Cb);	
+		//fprintf(pFile, "Next bytes are %X and %X\n", memory[PC + 1], memory[PC + 2]);
+		//fprintf(pFile, "A = %X, B = %X, C = %X, D = %X, E = %X, F = %X, H = %X L = %X, LY = %X\n", A, B, C, D, E, F, H, L, memory[0xFF44]);
+		//fprintf(pFile, "HL = %X, BC = %X, DE = %X, SP = %X\n", combineReg(H, L), combineReg(B, C), combineReg(D, E), SP);
 
 		switch (opcode & 0xF0) 
 		{
@@ -2982,7 +2982,7 @@ void gb::emulateCycle()
 			{
 				signed int val = memory[PC + 1];
 				unsigned int tempSP = SP;
-				ADD(tempSP, val);
+				ADD(tempSP, signed char(val));
 				H = (tempSP >> 8) & 0xFF;
 				L = tempSP & 0xFF;
 				PC += 2;
@@ -3045,7 +3045,7 @@ void gb::emulateCycle()
 	}
 
 	// Handle interrupts
-	/*if (IME)
+	if (IME)
 	{
 		for (int i = 0; i < 5; i++)
 		{
@@ -3068,7 +3068,7 @@ void gb::emulateCycle()
 			}
 		}
 	}
-	*/
+	
 
 }
 
@@ -3337,7 +3337,7 @@ void gb::OR(unsigned char val)
 
 // Sets the flags for a subtraction of an 8-bit value from A, without storing the result.
 void gb::CP(unsigned char val)
-{	
+{
 	Cb = val > A;
 	Hb = checkHalfCarry(A, val, '-');
 	Zb = checkZero(A - val);

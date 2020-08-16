@@ -348,3 +348,5 @@ gb/source
 
 # Log file
 gb/output.txt
+
+gb/*.gb
