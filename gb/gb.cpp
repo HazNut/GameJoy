@@ -77,7 +77,7 @@ void gb::loadGame()
 	streampos size;
 	char* memblock;
 
-	ifstream file("individual/02-interrupts.gb", ios::in | ios::binary | ios::ate);
+	ifstream file("tetris.gb", ios::in | ios::binary | ios::ate);
 	if (file.is_open())
 	{
 		size = file.tellg();
@@ -149,7 +149,7 @@ void gb::emulateCycle()
 
 		// Print the current opcode and other info to the output log.
 		_itoa_s(opcode, opcodeStr, 16);
-		//rintf(pFile, "A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X (%s %X %X %X)\n", A, F, B, C, D, E, H, L, SP, PC, opcodeStr, memory[PC + 1], memory[PC + 2], memory[PC + 3]);
+		//fprintf(pFile, "A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X (%s %X %X %X)\n", A, F, B, C, D, E, H, L, SP, PC, opcodeStr, memory[PC + 1], memory[PC + 2], memory[PC + 3]);
 		//fprintf(pFile, "\nOpcode after prefix is %s, PC is %X. SP = %X\n", opcodeStr, PC, SP);
 		//fprintf(pFile, "Next bytes are %X and %X\n", memory[PC + 1], memory[PC + 2]);
 		//fprintf(pFile, "A = %X, B = %X, C = %X, D = %X, E = %X, F = %X, H = %X L = %X, LY = %X\n", A, B, C, D, E, F, H, L, memory[0xFF44]);
