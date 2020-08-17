@@ -11,8 +11,8 @@ using namespace std;
 void gb::initialize()
 {
 	// Sets up log file.
-	//remove("output.txt");
-	//fopen_s(&pFile, "output.txt", "a");
+	/*remove("output.txt");
+	fopen_s(&pFile, "output.txt", "a");*/
 
 	// Sets all memory locations to zero.
 	for (int i = 0x0000; i <= 0xFFFF; i++)
@@ -97,6 +97,40 @@ void gb::loadGame()
 // Emulate a cycle of the Game Boy.
 void gb::emulateCycle()
 {
+
+	// If scheduled to set the IME, check if it should occur on this cycle. If it should, set it, otherwise do it next cycle.
+	if (scheduleIME)
+	{
+		if (cyclesBeforeEnableIME == 1)
+			cyclesBeforeEnableIME = 0;
+		else
+		{
+			EI();
+		}
+	}
+
+	// Handle interrupts
+	if (IME)
+	{
+		for (int i = 0; i < 5; i++)
+		{
+			if (((memory[0xFF0F] >> i) & 0x1) == 1)
+			{
+				if (((memory[0xFFFF] >> i) & 0x1) == 1)
+				{
+					modifyBit(memory[0xFF0F], 0, i);
+					DI();
+					memory[SP - 1] = PC >> 8;
+					memory[SP - 2] = PC & 0xFF;
+					SP -= 2;
+					PC = intVectors[i];
+					return;
+
+				}
+			}
+		}
+	}
+
 	opcode = memory[PC]; // Get the current opcode.
 	char opcodeStr[3];   // Can store the opcode in a string so it can be printed.
 
@@ -115,7 +149,7 @@ void gb::emulateCycle()
 
 		// Print the current opcode and other info to the output log.
 		_itoa_s(opcode, opcodeStr, 16);
-		//fprintf(pFile, "A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X (%s %X %X %X)\n", A, F, B, C, D, E, H, L, SP, PC, opcodeStr, memory[PC + 1], memory[PC + 2], memory[PC + 3]);
+		//rintf(pFile, "A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X (%s %X %X %X)\n", A, F, B, C, D, E, H, L, SP, PC, opcodeStr, memory[PC + 1], memory[PC + 2], memory[PC + 3]);
 		//fprintf(pFile, "\nOpcode after prefix is %s, PC is %X. SP = %X\n", opcodeStr, PC, SP);
 		//fprintf(pFile, "Next bytes are %X and %X\n", memory[PC + 1], memory[PC + 2]);
 		//fprintf(pFile, "A = %X, B = %X, C = %X, D = %X, E = %X, F = %X, H = %X L = %X, LY = %X\n", A, B, C, D, E, F, H, L, memory[0xFF44]);
@@ -2815,9 +2849,9 @@ void gb::emulateCycle()
 				break;
 
 			case 0x09: // RETI
-				EI();
 				PC = (memory[SP + 1] << 8) | memory[SP];
 				SP += 2;
+				EI();
 				break;
 
 			case 0x0A: // JP C, a16
@@ -3052,39 +3086,35 @@ void gb::emulateCycle()
 	
 	updateFlagReg(); // Update F with the new flag values.
 
-	// If scheduled to set the IME, check if it should occur on this cycle. If it should, set it, otherwise do it next cycle.
-	if (scheduleIME)
+	/*memory[0xFF04] += 1;
+
+	int freq = 0;
+	switch (memory[0xFF07])
 	{
-		if (cyclesBeforeEnableIME == 1)
-			cyclesBeforeEnableIME = 0;
-		else
-		{
-			EI();
-		}		
+	case 0x00:
+		freq = 4069;
+		break;
+
+	case 0x01:
+		freq = 262144;
+		break;
+
+	case 0x10:
+		freq = 65536;
+		break;
+
+	case 0x11:
+		freq = 16384;
+		break;
 	}
 
-	// Handle interrupts
-	if (IME)
+	if (memory[0xFF05] + freq > 0xFF)
 	{
-		for (int i = 0; i < 5; i++)
-		{
-			if (((memory[0xFF0F] >> i) & 0x1) == 1)
-			{
-				if (((memory[0xFFFF] >> i) & 0x1) == 1)
-				{
-					modifyBit(memory[0xFF0F], 0, i);
-					DI();
-					PC += 1;
-					memory[SP - 1] = PC >> 8;
-					memory[SP - 2] = PC & 0xFF;
-					SP -= 2;
-					PC = intVectors[i];
-					break;
-
-				}
-			}
-		}
+		memory[0xFF05] = memory[0xFF06];
+		modifyBit(memory[0xFF0F], 1, 2);
 	}
+	else
+		memory[0xFF05] += freq;*/
 }
 
 // Updates F with the new flag values.

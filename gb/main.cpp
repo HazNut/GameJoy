@@ -123,7 +123,7 @@ void drawSprites(SDL_Renderer* renderer, int currLine)
 }
 
 int main(int argc, char** argv)
-{/*
+{
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_Window *win = SDL_CreateWindow("GameJoy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160, 144, SDL_WINDOW_SHOWN);
 	SDL_Renderer* renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
@@ -131,7 +131,7 @@ int main(int argc, char** argv)
 	SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surf);
 	SDL_SetRenderTarget(renderer, texture);
 	
-	SDL_Event e;*/
+	SDL_Event e;
 
 	// Set up the Game Boy and load the game.
 	myGB.initialize();
@@ -146,7 +146,7 @@ int main(int argc, char** argv)
 	{
 		myGB.emulateCycle();
 		
-		/*LY = myGB.memory[0xFF44];
+		LY = myGB.memory[0xFF44];
 		
 		if (LY < 0x90)
 		{
@@ -162,14 +162,14 @@ int main(int argc, char** argv)
 			drawSprites(renderer, LY);
 			
 			SDL_RenderClear(renderer);
-		}*/
+		}
 
-		/*myGB.memory[0xFF44] += 1;
+		myGB.memory[0xFF44] += 1;
 
 		if (myGB.memory[0xFF44] == 0x99)
-			myGB.memory[0xFF44] = 0x0;*/
+			myGB.memory[0xFF44] = 0x0;
 
-	/*	ticks += 1;
+		ticks += 1;
 
 		if (ticks == 1000)
 		{
@@ -179,7 +179,7 @@ int main(int argc, char** argv)
 			}
 			ticks = 0;
 		}
-				*/
+				
 	}
 
 }
