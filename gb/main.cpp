@@ -33,9 +33,11 @@ void drawTile(SDL_Renderer* renderer, unsigned int memLocation, unsigned char x,
 			{
 				if (x + bit + scrollX >= 160)
 					x -= 160;
-				
+				SDL_RenderDrawPoint(renderer, (x + bit) - scrollX, (y + (byte / 2)) - scrollY);
 			}
-			SDL_RenderDrawPoint(renderer, (x + bit) - scrollX, (y + (byte / 2)) - scrollY);
+			else
+				SDL_RenderDrawPoint(renderer, (x + bit), (y + (byte / 2)));
+			
 		}
 	}
 }
@@ -70,9 +72,8 @@ void displayBackground(SDL_Renderer* renderer)
 
 void displayWindow(SDL_Renderer* renderer)
 {
-	int windowX = myGB.memory[0xFF4B];
+	int windowX = myGB.memory[0xFF4B] - 0x7;
 	int windowY = myGB.memory[0xFF4A];
-
 	int mapBaseVal;
 
 	// Get the base value for the tile map.
@@ -83,16 +84,17 @@ void displayWindow(SDL_Renderer* renderer)
 
 	for (int tile = 0; tile < 32 * 32; tile++)
 	{
-		char tileNumber = myGB.memory[mapBaseVal + tile]; // Get the tile number from the tile map.
-		char tileStartByte; // Stores the start of the tile info in tile data.
+		unsigned char tileNumber = myGB.memory[mapBaseVal + tile]; // Get the tile number from the tile map.
+		unsigned int tileStartByte; // Stores the start of the tile info in tile data.
 
 		// Get start byte of tile data.
 		if ((myGB.memory[0xFF40] >> 4) & 0x1)
-			tileStartByte = 0x8800 + signed char(tileNumber);
+			tileStartByte = 0x8000 + (tileNumber * 16);
+			
 		else
-			tileStartByte = 0x8000 + tileNumber;
+			tileStartByte = 0x9000 + (signed char(tileNumber) * 16);
 
-		drawTile(renderer, tileStartByte, windowX + (tile * 8), windowY + ((tile / 32) * 8), false);
+		drawTile(renderer, tileStartByte, windowX + ((tile % 32) * 8), windowY + ((tile / 32) * 8), false);
 	}
 }
 
@@ -101,11 +103,10 @@ void drawSprites(SDL_Renderer* renderer)
 
 	for (int sprite = 0; sprite < 40; sprite++)
 	{
-		char spriteNumber = myGB.memory[0xFE00 + (sprite * 4) + 2];
-		int spriteX = myGB.memory[0xFE00 + (sprite * 4) + 1] + 8;
-		int spriteY = myGB.memory[0xFE00 + (sprite * 4)] + 16;
-		char tileStartByte = 0x8000 + spriteNumber;
-
+		unsigned char spriteNumber = myGB.memory[0xFE00 + (sprite * 4) + 2];
+		unsigned int spriteX = myGB.memory[0xFE00 + (sprite * 4) + 1] + 8;
+		unsigned int spriteY = myGB.memory[0xFE00 + (sprite * 4)] + 16;
+		unsigned int tileStartByte = 0x8000 + spriteNumber;
 		drawTile(renderer, tileStartByte, spriteX, spriteY, false);
 	}
 }
@@ -122,22 +123,23 @@ int main(int argc, char** argv)
 	myGB.initialize();
 	myGB.loadGame();
 
-	myGB.memory[0xFF44] = 0x90;
+	myGB.memory[0xFF44] = 0x94;
 
 	// Keep emulating CPU cycles.
 	for (;;)
 	{
-		SDL_RenderClear(renderer);
-		myGB.modifyBit(myGB.memory[0xFF0F], 1, 0);
-		for (int i = 0; i < 10000; i++)
-			myGB.emulateCycle();
-		displayBackground(renderer);
 		
-		//displayWindow(renderer);
-		//drawSprites(renderer);
+		for (int i = 0; i < 100000; i++)
+		{
+			myGB.modifyBit(myGB.memory[0xFF0F], 1, 0);
+			myGB.emulateCycle();
+		}
+
+		displayBackground(renderer);
+		displayWindow(renderer);
+		drawSprites(renderer);
 
 		SDL_RenderPresent(renderer);
-
 		while (SDL_PollEvent(&e))
 		{
 			1;

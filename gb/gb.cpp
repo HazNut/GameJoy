@@ -77,7 +77,7 @@ void gb::loadGame()
 	streampos size;
 	char* memblock;
 
-	ifstream file("tetris.gb", ios::in | ios::binary | ios::ate);
+	ifstream file("individual/03-op sp,hl.gb", ios::in | ios::binary | ios::ate);
 	if (file.is_open())
 	{
 		size = file.tellg();
@@ -144,8 +144,7 @@ void gb::emulateCycle()
 	if (opcode == 0xCB) // Some instructions are prefixed with CB.
 	{
 		// Get the opcode after the prefix.
-		PC += 1;
-		opcode = memory[PC];
+		
 
 		// Print the current opcode and other info to the output log.
 		_itoa_s(opcode, opcodeStr, 16);
@@ -154,7 +153,8 @@ void gb::emulateCycle()
 		//fprintf(pFile, "Next bytes are %X and %X\n", memory[PC + 1], memory[PC + 2]);
 		//fprintf(pFile, "A = %X, B = %X, C = %X, D = %X, E = %X, F = %X, H = %X L = %X, LY = %X\n", A, B, C, D, E, F, H, L, memory[0xFF44]);
 		//fprintf(pFile, "HL = %X, BC = %X, DE = %X, SP = %X\n", combineReg(H, L), combineReg(B, C), combineReg(D, E), SP);
-
+		PC += 1;
+		opcode = memory[PC];
 		// Check each half of the opcode to get to the required instruction.
 		switch (opcode & 0xF0)
 		{
