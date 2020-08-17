@@ -11,7 +11,7 @@ private:
 	unsigned char IME; // Flag to disable or enable interrupts.
 	bool scheduleIME; // If IME is scheduled to be set or not.
 	int cyclesBeforeEnableIME = 1; // Cycles before IME update.
-	char intVectors[5] = { 0x40, 0x48, 0x50, 0x58, 0x60 }; // Jump vectors for interrupts.
+	unsigned char intVectors[5] = { 0x40, 0x48, 0x50, 0x58, 0x60 }; // Jump vectors for interrupts.
 
 public:
 	FILE* pFile; // Pointer for log file.
@@ -20,11 +20,11 @@ public:
 	void loadGame(); // Load the game into memory.
 	void emulateCycle(); // Emulate an instruction.
 	void updateFlagReg(); // Alter the flags in the flag register.
-	void modifyBit(unsigned char& r, int val, int pos); // Modify a bit in a byte.
+	void modifyBit(unsigned char &r, int val, int pos); // Modify a bit in a byte.
 	int checkHalfCarry(unsigned char val1, unsigned char val2, char mode); // Check half-carry for adding/subtracting 2 bytes.
 	int checkHalfCarry(unsigned int val1, unsigned int val2, char mode); // Check half-carry for adding/subtracting 2 16-bit values.
 	int checkZero(unsigned char a); // Check if the zero bit should be set.
-	int combineReg(unsigned char r1, unsigned char r2); // Combine 2 registers into 1 16-bit register.
+	unsigned int combineReg(unsigned char r1, unsigned char r2); // Combine 2 registers into 1 16-bit register.
 	void splitReg(unsigned char& r1, unsigned char& r2, unsigned int r3); // Put a combined register's values back into the originals.
 
 	void INC(unsigned char &r); // Increment a byte.
@@ -44,7 +44,7 @@ public:
 	void BIT(unsigned char pos, unsigned char r); // Sets the zero flag if a given bit equals 0.
 	void SWAP(unsigned char& val); // Swaps the upper and lower nibble of a byte.
 	void CALL(); // Calls the next memory address.
-	void RST(char vec); // Calls a given memory address.
+	void RST(unsigned char vec); // Calls a given memory address.
 	void EI();
 	void DI();
 };

@@ -140,7 +140,7 @@ int main(int argc, char** argv)
 
 	int ticks = 0; // Every 1000 cycles, get SDL events.
 	unsigned char LY;  // Stores LY.
-
+	myGB.memory[0xFF44] = 0x90;
 	// Keep emulating CPU cycles.
 	for (;;)
 	{
@@ -164,10 +164,10 @@ int main(int argc, char** argv)
 			SDL_RenderClear(renderer);
 		}*/
 
-		myGB.memory[0xFF44] += 1;
+		/*myGB.memory[0xFF44] += 1;
 
 		if (myGB.memory[0xFF44] == 0x99)
-			myGB.memory[0xFF44] = 0x0;
+			myGB.memory[0xFF44] = 0x0;*/
 
 	/*	ticks += 1;
 

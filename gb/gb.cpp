@@ -77,7 +77,7 @@ void gb::loadGame()
 	streampos size;
 	char* memblock;
 
-	ifstream file("individual/01-special.gb", ios::in | ios::binary | ios::ate);
+	ifstream file("individual/02-interrupts.gb", ios::in | ios::binary | ios::ate);
 	if (file.is_open())
 	{
 		size = file.tellg();
@@ -115,6 +115,7 @@ void gb::emulateCycle()
 
 		// Print the current opcode and other info to the output log.
 		_itoa_s(opcode, opcodeStr, 16);
+		//fprintf(pFile, "A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X (%s %X %X %X)\n", A, F, B, C, D, E, H, L, SP, PC, opcodeStr, memory[PC + 1], memory[PC + 2], memory[PC + 3]);
 		//fprintf(pFile, "\nOpcode after prefix is %s, PC is %X. SP = %X\n", opcodeStr, PC, SP);
 		//fprintf(pFile, "Next bytes are %X and %X\n", memory[PC + 1], memory[PC + 2]);
 		//fprintf(pFile, "A = %X, B = %X, C = %X, D = %X, E = %X, F = %X, H = %X L = %X, LY = %X\n", A, B, C, D, E, F, H, L, memory[0xFF44]);
@@ -1488,10 +1489,11 @@ void gb::emulateCycle()
 	{
 		// Print out the opcode and other info to the log.
 		_itoa_s(opcode, opcodeStr, 16);
-		//fprintf(pFile, "\nOpcode is %s, PC is %X. SP = %X\n", opcodeStr, PC, SP);
-		//fprintf(pFile, "Next bytes are %X and %X\n", memory[PC + 1], memory[PC + 2]);
-		//fprintf(pFile, "A = %X, B = %X, C = %X, D = %X, E = %X, F = %X, H = %X L = %X, LY = %X\n", A, B, C, D, E, F, H, L, memory[0xFF44]);
-		//fprintf(pFile, "HL = %X, BC = %X, DE = %X, SP = %X\n", combineReg(H, L), combineReg(B, C), combineReg(D, E), SP);
+		//printf("%s\n", opcodeStr);
+		//fprintf(pFile, "A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X (%s %X %X %X)\n", A, F, B, C, D, E, H, L, SP, PC, opcodeStr, memory[PC + 1], memory[PC + 2], memory[PC + 3]);
+		/*fprintf(pFile, "Next bytes are %X and %X\n", memory[PC + 1], memory[PC + 2]);
+		fprintf(pFile, "A = %X, B = %X, C = %X, D = %X, E = %X, F = %X, H = %X L = %X, LY = %X\n", A, B, C, D, E, F, H, L, memory[0xFF44]);
+		fprintf(pFile, "HL = %X, BC = %X, DE = %X, SP = %X\n", combineReg(H, L), combineReg(B, C), combineReg(D, E), SP);*/
 
 		switch (opcode & 0xF0) 
 		{
@@ -1749,6 +1751,7 @@ void gb::emulateCycle()
 					{
 						A += 0x60;
 						Cb = 1;
+						
 					}
 					if (((A & 0xF) > 0x9) || Hb == 1)
 						A += 0x6;
@@ -1756,15 +1759,19 @@ void gb::emulateCycle()
 				else
 				{
 					if (Cb == 1)
+					{
 						A -= 0x60;
+						Cb = 1;
+					}
+						
 					if (Hb == 1)
 						A -= 0x6;
 				}
 
 				Zb = checkZero(A);
 				Hb = 0;
-
 				PC += 1;
+				break;
 			}
 
 			case 0x08: // JR Z, r8
@@ -2618,7 +2625,7 @@ void gb::emulateCycle()
 
 			case 0x0F: // CP A
 				CP(A);
-				Zb = 1;
+				Zb = 1; // Necessary?
 				PC += 1;
 				break;
 			}
@@ -2941,14 +2948,14 @@ void gb::emulateCycle()
 		case 0xF0:
 			switch (opcode & 0x0F)
 			{
-			case 0x00: 
+			case 0x00: // LDH A, (a8)
 				A = memory[0xFF00 + memory[PC + 1]];
 				PC += 2;
 				break;
 
-			case 0x01: // POP A
+			case 0x01: // POP AF
 				A = memory[SP + 1];
-				F = memory[SP] & 0xF0 | F & 0xF;
+				F = (memory[SP] & 0xF0);
 				SP += 2;
 				PC += 1;
 				Zb = (F >> 7) & 0x1;
@@ -3007,7 +3014,7 @@ void gb::emulateCycle()
 
 			case 0x0A: // LD A, (a16)
 			{
-				int addr = memory[PC + 2] << 8 | memory[PC + 1];
+				unsigned int addr = memory[PC + 2] << 8 | memory[PC + 1];
 				A = memory[addr];
 				PC += 3;
 				break;
@@ -3146,7 +3153,7 @@ int gb::checkZero(unsigned char val)
 }
 
 // Returns the 16-bit value when combining two 8-bit register values together.
-int gb::combineReg(unsigned char reg1, unsigned char reg2)
+unsigned int gb::combineReg(unsigned char reg1, unsigned char reg2)
 {
 	return (reg1 << 8) | reg2;
 }
@@ -3217,7 +3224,7 @@ void gb::ADD(unsigned char &val1, unsigned char val2, bool carry)
 // Adds a 16-bit value to another 16-bit value.
 void gb::ADD(unsigned int &val1, unsigned int val2)
 {
-	if (val1 > (unsigned int(0xFFFF) - val2))
+	if (val1 > (0xFFFF - val2))
 		Cb = 1;
 	else
 		Cb = 0;
@@ -3230,12 +3237,12 @@ void gb::ADD(unsigned int &val1, unsigned int val2)
 // Adds a signed 8-bit value to an unsigned 16-bit value.
 void gb::ADD(unsigned int &val1, signed char val2)
 {
-	if (val1 > (0xFF - val2))
+	if ((val1 & 0xFF) > (0xFF - (val2 & 0xFF)))
 		Cb = 1;
 	else
 		Cb = 0;
-	Hb = checkHalfCarry(val1, val2, '+');
-	
+	Hb = ((val1 & 0xF) + (val2 & 0xF) > 0xF);
+
 	val1 += val2;
 	Nb = 0;
 	Zb = 0;
@@ -3310,7 +3317,7 @@ void gb::CP(unsigned char val)
 // Rotate a byte left or right. Can rotate normally or through carry.
 void gb::ROT(unsigned char mode, bool carry, unsigned char& val)
 {
-	unsigned int oldCb = Cb;
+	int oldCb = Cb;
 
 	// Check which direction we are rotating in.
 	if (mode == 'L')
@@ -3414,7 +3421,7 @@ void gb::CALL()
 }
 
 // Calls the given address.
-void gb::RST(char vec)
+void gb::RST(unsigned char vec)
 {
 	PC += 1;
 	memory[SP - 1] = PC >> 8;
