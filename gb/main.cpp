@@ -4,45 +4,28 @@
 
 gb myGB;
 
-void drawTile(SDL_Renderer* renderer, unsigned int memLocation, unsigned char x, unsigned char y, bool wrap)
+void drawTile(int(&gfxArray)[256 * 256], unsigned int memLocation, int x, int y)
 {
-	unsigned char scrollY = myGB.memory[0xFF42];
-	unsigned char scrollX = myGB.memory[0xFF43];
 
-	for (int byte = 0; byte < 15; byte += 2)
-	{
-		unsigned char lowByte = myGB.memory[memLocation + byte];
-		unsigned char highByte = myGB.memory[memLocation + byte + 1];
-		
-		if (wrap)
-		{
-			if (y + (byte / 2) + scrollY >= 144)
-				y -= 144;
-		}
 
-		for (int bit = 0; bit < 8; bit++)
-		{
-			unsigned char lowBit = (lowByte >> (bit)) & 0x1;
-			unsigned char highBit = (highByte >> (bit)) & 0x1;
-			unsigned int total = lowBit + (highBit * 2);
-			unsigned char shade = myGB.memory[0xFF47] >> (total * 2);
+	int byte = (y % 8) * 2;
 
-			SDL_SetRenderDrawColor(renderer, shade, shade, shade, SDL_ALPHA_OPAQUE);
+	unsigned char lowByte = myGB.memory[memLocation + byte];
+	unsigned char highByte = myGB.memory[memLocation + byte + 1];
 
-			if (wrap)
-			{
-				if (x + bit + scrollX >= 160)
-					x -= 160;
-				SDL_RenderDrawPoint(renderer, (x + bit) - scrollX, (y + (byte / 2)) - scrollY);
-			}
-			else
-				SDL_RenderDrawPoint(renderer, (x + bit), (y + (byte / 2)));
-			
-		}
-	}
+	unsigned char lowBit = (lowByte >> (7 - (x % 8))) & 0x1;
+	unsigned char highBit = (highByte >> (7 - (x % 8))) & 0x1;
+	unsigned int total = lowBit + (highBit * 2);
+	unsigned char shade = myGB.memory[0xFF47] >> (total * 2);
+	/*if (x > 160)
+		x -= 160;
+	if (y > 144)
+		y -= 144;*/
+	gfxArray[(x % 256) + (y * 256)] = ((shade << 16) | (shade << 8) | shade);
 }
 
-void displayBackground(SDL_Renderer* renderer)
+
+void displayBackground(int (&gfxArray)[256 * 256])
 {
 	int mapBaseVal;
 
@@ -62,15 +45,15 @@ void displayBackground(SDL_Renderer* renderer)
 		// Get start byte of tile data.
 		if ((myGB.memory[0xFF40] >> 4) & 0x1)
 			tileStartByte = 0x8000 + (tileNumber * 16);
+	
 		
 		else
 			tileStartByte = 0x9000 + (signed char(tileNumber) * 16);
-		
-		drawTile(renderer, tileStartByte, (tile % 32) * 8, (tile / 32) * 8, true);
+		drawTile(gfxArray, tileStartByte, tile * 8, true);
 	}
 }
 
-void displayWindow(SDL_Renderer* renderer)
+void displayWindow(int (&gfxArray)[256 * 256])
 {
 	int windowX = myGB.memory[0xFF4B] - 0x7;
 	int windowY = myGB.memory[0xFF4A];
@@ -94,11 +77,11 @@ void displayWindow(SDL_Renderer* renderer)
 		else
 			tileStartByte = 0x9000 + (signed char(tileNumber) * 16);
 
-		drawTile(renderer, tileStartByte, windowX + ((tile % 32) * 8), windowY + ((tile / 32) * 8), false);
+		drawTile(gfxArray, tileStartByte, tile, false);
 	}
 }
 
-void drawSprites(SDL_Renderer* renderer)
+void drawSprites(int (&gfxArray)[256 * 256])
 {
 
 	for (int sprite = 0; sprite < 40; sprite++)
@@ -107,16 +90,17 @@ void drawSprites(SDL_Renderer* renderer)
 		unsigned int spriteX = myGB.memory[0xFE00 + (sprite * 4) + 1] + 8;
 		unsigned int spriteY = myGB.memory[0xFE00 + (sprite * 4)] + 16;
 		unsigned int tileStartByte = 0x8000 + spriteNumber;
-		drawTile(renderer, tileStartByte, spriteX, spriteY, false);
+		drawTile(gfxArray, tileStartByte, spriteX + spriteY, false);
 	}
 }
 
 int main(int argc, char** argv)
 {
 	SDL_Init(SDL_INIT_VIDEO);
-	SDL_Window* win = SDL_CreateWindow("GameJoy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160 * 4, 144 * 4, SDL_WINDOW_SHOWN);
+	SDL_Window* win = SDL_CreateWindow("GameJoy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 256 * 2, 256 * 2, SDL_WINDOW_SHOWN);
 	SDL_Renderer* renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-	SDL_RenderSetScale(renderer, 4, 4);
+	SDL_RenderSetScale(renderer, 2, 2);
+	SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, SDL_CreateRGBSurface(0, 256, 256, 32, 0, 0, 0, 0));
 	SDL_Event e;
 
 	// Set up the Game Boy and load the game.
@@ -124,7 +108,12 @@ int main(int argc, char** argv)
 	myGB.loadGame();
 
 	myGB.memory[0xFF44] = 0x94;
-
+	int gfxArray[256 * 256];
+	int x = 0;
+	int y = 0;
+	int mapBaseVal;
+	int currTile;
+	int tileStartByte;
 	// Keep emulating CPU cycles.
 	for (;;)
 	{
@@ -134,12 +123,32 @@ int main(int argc, char** argv)
 			myGB.modifyBit(myGB.memory[0xFF0F], 1, 0);
 			myGB.emulateCycle();
 		}
+		unsigned char scrollY = myGB.memory[0xFF42];
+		unsigned char scrollX = myGB.memory[0xFF43];
+		if ((myGB.memory[0xFF40] >> 3) && x >= 160)
+			mapBaseVal = 0x9C00;
+		else
+			mapBaseVal = 0x9800;
 
-		displayBackground(renderer);
-		displayWindow(renderer);
-		drawSprites(renderer);
+		for (int y = 0; y < 256; y++)
+		{
+			for (int x = 0; x < 256; x++)
+			{
+				currTile = myGB.memory[mapBaseVal + ((x / 8) % 32) + ((y / 8) * 32)];
+				if ((myGB.memory[0xFF40] >> 4) & 0x1)
+					tileStartByte = 0x8000 + (currTile * 16);
+				else
+					tileStartByte = 0x9000 + (signed char(currTile) * 16);
+				drawTile(gfxArray, tileStartByte, x, y);
+			}
+		}
 
+		SDL_UpdateTexture(texture, NULL, gfxArray, 256 * 4);
+		SDL_Rect destRect = { -scrollX, -scrollY, 256, 256 };
+		printf("%d, %d\n", scrollX, scrollY);
+		SDL_RenderCopy(renderer, texture, NULL, NULL);
 		SDL_RenderPresent(renderer);
+
 		while (SDL_PollEvent(&e))
 		{
 			1;
