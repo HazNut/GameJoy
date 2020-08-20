@@ -11,8 +11,8 @@ using namespace std;
 void gb::initialize()
 {
 	// Sets up log file.
-	/*remove("output.txt");
-	fopen_s(&pFile, "output.txt", "a");*/
+	//remove("output.txt");
+	//fopen_s(&pFile, "output.txt", "a");
 
 	// Sets all memory locations to zero.
 	for (int i = 0x0000; i <= 0xFFFF; i++)
@@ -77,7 +77,7 @@ void gb::loadGame()
 	streampos size;
 	char* memblock;
 
-	ifstream file("individual/03-op sp,hl.gb", ios::in | ios::binary | ios::ate);
+	ifstream file("tetris.gb", ios::in | ios::binary | ios::ate);
 	if (file.is_open())
 	{
 		size = file.tellg();
