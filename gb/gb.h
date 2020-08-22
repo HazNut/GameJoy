@@ -1,6 +1,15 @@
 #pragma once
 #include <stdio.h>
 
+// Using names for named registers in memory.
+constexpr unsigned int JOYP = 0xFF00;
+constexpr unsigned int IF = 0xFF0F;
+constexpr unsigned int LCDC = 0xFF40;
+constexpr unsigned int SCROLLY = 0xFF42;
+constexpr unsigned int SCROLLX = 0xFF43;
+constexpr unsigned int LY = 0xFF44;
+constexpr unsigned int BGP = 0xFF47;
+
 class gb
 {
 private:
@@ -13,7 +22,7 @@ private:
 	bool scheduleIME; // If IME is scheduled to be set or not.
 	int cyclesBeforeEnableIME = 1; // Cycles before IME update.
 	unsigned char intVectors[5] = { 0x40, 0x48, 0x50, 0x58, 0x60 }; // Jump vectors for interrupts.
-	bool logging = true; // Set to log processor state to output.txt.
+	bool logging = false; // Set to log processor state to output.txt.
 
 public:
 	FILE* pFile; // Pointer for log file.

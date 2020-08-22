@@ -8,51 +8,51 @@ void processInputs(const Uint8* kb)
 {
 
 	// GB wants to check buttons.
-	if ((myGB.memory[0xFF00] >> 5) == 0)
+	if ((myGB.memory[JOYP] >> 5) == 0)
 	{
 		if (kb[SDL_SCANCODE_P])
-			myGB.modifyBit(myGB.memory[0xFF00], 0, 0); // If pressing A, set the input state in memory.
+			myGB.modifyBit(myGB.memory[JOYP], 0, 0); // If pressing A, set the input state in memory.
 		else
-			myGB.modifyBit(myGB.memory[0xFF00], 1, 0); // Else reset the input state (1 = off).
+			myGB.modifyBit(myGB.memory[JOYP], 1, 0); // Else reset the input state (1 = off).
 
 		if (kb[SDL_SCANCODE_O])
-			myGB.modifyBit(myGB.memory[0xFF00], 0, 1);
+			myGB.modifyBit(myGB.memory[JOYP], 0, 1);
 		else
-			myGB.modifyBit(myGB.memory[0xFF00], 1, 1);
+			myGB.modifyBit(myGB.memory[JOYP], 1, 1);
 
 		if (kb[SDL_SCANCODE_K])
-			myGB.modifyBit(myGB.memory[0xFF00], 0, 2);
+			myGB.modifyBit(myGB.memory[JOYP], 0, 2);
 		else
-			myGB.modifyBit(myGB.memory[0xFF00], 1, 2);
+			myGB.modifyBit(myGB.memory[JOYP], 1, 2);
 
 		if (kb[SDL_SCANCODE_L])
-			myGB.modifyBit(myGB.memory[0xFF00], 0, 3);
+			myGB.modifyBit(myGB.memory[JOYP], 0, 3);
 		else
-			myGB.modifyBit(myGB.memory[0xFF00], 1, 3);
+			myGB.modifyBit(myGB.memory[JOYP], 1, 3);
 	}
 
 	// GB wants to check D-pad.
-	else if ((myGB.memory[0xFF00] >> 4) == 0)
+	else if ((myGB.memory[JOYP] >> 4) == 0)
 	{
 		if (kb[SDL_SCANCODE_D])
-			myGB.modifyBit(myGB.memory[0xFF00], 0, 0);
+			myGB.modifyBit(myGB.memory[JOYP], 0, 0);
 		else
-			myGB.modifyBit(myGB.memory[0xFF00], 1, 0);
+			myGB.modifyBit(myGB.memory[JOYP], 1, 0);
 
 		if (kb[SDL_SCANCODE_A])
-			myGB.modifyBit(myGB.memory[0xFF00], 0, 1);
+			myGB.modifyBit(myGB.memory[JOYP], 0, 1);
 		else
-			myGB.modifyBit(myGB.memory[0xFF00], 1, 1);
+			myGB.modifyBit(myGB.memory[JOYP], 1, 1);
 
 		if (kb[SDL_SCANCODE_W])
-			myGB.modifyBit(myGB.memory[0xFF00], 0, 2);
+			myGB.modifyBit(myGB.memory[JOYP], 0, 2);
 		else
-			myGB.modifyBit(myGB.memory[0xFF00], 1, 2);
+			myGB.modifyBit(myGB.memory[JOYP], 1, 2);
 
 		if (kb[SDL_SCANCODE_S])
-			myGB.modifyBit(myGB.memory[0xFF00], 0, 3);
+			myGB.modifyBit(myGB.memory[JOYP], 0, 3);
 		else
-			myGB.modifyBit(myGB.memory[0xFF00], 1, 3);
+			myGB.modifyBit(myGB.memory[JOYP], 1, 3);
 	}
 }
 
@@ -72,7 +72,7 @@ void drawLineOfTile(unsigned int(&gfxArray)[160 * 144], unsigned int memLocation
 	unsigned int total = lowBit + (highBit * 2);
 
 	// The total gives the shade of grey to be used for the pixel.
-	unsigned char shade = myGB.memory[0xFF47] >> (total * 2);
+	unsigned char shade = myGB.memory[BGP] >> (total * 2);
 
 	// Now add this grey shade to the RGB array.
 	gfxArray[(x % 160) + (y * 160)] = ((shade << 16) | (shade << 8) | shade);
@@ -100,7 +100,7 @@ int main(int argc, char** argv)
 	unsigned char currTile; // The current tile to have a line rendered.
 	unsigned int mapBaseVal, mapOffset, tileStartByte; // Pointers to memory locations related to tiles.
 	int cyclesSinceLastUpdate = 0; // Every 100 cycles of the CPU, update the keyboard state.
-	myGB.memory[0xFF44] = 0x0; // LY set to 0; this means we are rendering the first scanline.
+	myGB.memory[LY] = 0x0; // LY set to 0; this means we are rendering the first scanline.
 
 	// Keep emulating until the end of time itself.
 	for (;;)
@@ -124,66 +124,66 @@ int main(int argc, char** argv)
 		}
 		
 		// After setting the V-Blank interrupt, it can be reset.
-		if (myGB.memory[0xFF0F] & 0x1)
-			myGB.modifyBit(myGB.memory[0xFF0F], 0, 0);
+		if (myGB.memory[IF] & 0x1)
+			myGB.modifyBit(myGB.memory[IF], 0, 0);
 
 		// Get scroll values.
-		scrollY = myGB.memory[0xFF42];
-		scrollX = myGB.memory[0xFF43];
-
+		scrollX = myGB.memory[SCROLLX];
+		scrollY = myGB.memory[SCROLLY];
+	
 		// Get the tile map base pointer to use.
-		if (((myGB.memory[0xFF40] >> 3) & 0x1))
+		if (((myGB.memory[LCDC] >> 3) & 0x1))
 			mapBaseVal = 0x9C00;
 			
 		else
 			mapBaseVal = 0x9800;
 			
 		// If not in V-Blank, render a scanline. This is done by drawing a line of pixels from consecutive tiles.
-		if (myGB.memory[0xFF44] < 0x90)
+		if (myGB.memory[LY] < 0x90)
 		{
 			for (int x = 0; x < 160; x++)
 			{
 
 				// Here we calculate the current tile to have its line drawn (very ugly). Background wraps around.
 
-				if (myGB.memory[0xFF44] + scrollY >= 256) // If reached bottom of background, wrap back to the top.
-					mapOffset = (((x + scrollX) / 8) % 32) + (((myGB.memory[0xFF44] + scrollY - 256) / 8) * 32);
+				if (myGB.memory[LY] + scrollY >= 256) // If reached bottom of background, wrap back to the top.
+					mapOffset = (((x + scrollX) / 8) % 32) + (((myGB.memory[LY] + scrollY - 256) / 8) * 32);
 				else if (x + scrollX >= 256) // X wrapping - right wraps back to left.
-					mapOffset = (((x + scrollX - 256) / 8) % 32) + (((myGB.memory[0xFF44] + scrollY) / 8) * 32);
-				else if ((x + scrollX >= 256) && (myGB.memory[0xFF44] + scrollY >= 256)) // X and Y wrap.
-					mapOffset = (((x + scrollX - 256) / 8) % 32) + (((myGB.memory[0xFF44] + scrollY - 256) / 8) * 32);
+					mapOffset = (((x + scrollX - 256) / 8) % 32) + (((myGB.memory[LY] + scrollY) / 8) * 32);
+				else if ((x + scrollX >= 256) && (myGB.memory[LY] + scrollY >= 256)) // X and Y wrap.
+					mapOffset = (((x + scrollX - 256) / 8) % 32) + (((myGB.memory[LY] + scrollY - 256) / 8) * 32);
 				else // Regular, no wrapping.
-					mapOffset = (((x + scrollX) / 8) % 32) + (((myGB.memory[0xFF44] + scrollY) / 8) * 32);
+					mapOffset = (((x + scrollX) / 8) % 32) + (((myGB.memory[LY] + scrollY) / 8) * 32);
 				
 				currTile = myGB.memory[mapBaseVal + mapOffset]; // Gets the tile number from the tile map.
 			
 				// Gets the memory location of the start of the tile data using the correct method.
-				if ((myGB.memory[0xFF40] >> 4) & 0x1)
+				if ((myGB.memory[LCDC] >> 4) & 0x1)
 					tileStartByte = 0x8000 + (currTile * 16); // 8000 addressing (unsigned).
 				else
 				{
 					tileStartByte = 0x9000 + (signed char(currTile) * 16); // 8800 addressing (signed).
 				}
 					
-				drawLineOfTile(gfxArray, tileStartByte, x, myGB.memory[0xFF44]); // Draw a line of the current tile.
+				drawLineOfTile(gfxArray, tileStartByte, x, myGB.memory[LY]); // Draw a line of the current tile.
 			}
 		}
 	
 		
-		myGB.memory[0xFF44] += 1; // Increment LY as a scanline has been drawn.
+		myGB.memory[LY] += 1; // Increment LY as a scanline has been drawn.
 
 		// Once all scanlines have been drawn, render to the screen and set the V-Blank interrupt.
-		if (myGB.memory[0xFF44] == 0x90)
+		if (myGB.memory[LY] == 0x90)
 		{
 			SDL_UpdateTexture(texture, NULL, gfxArray, 160 * 4);
 			SDL_RenderCopy(renderer, texture, NULL, NULL);
 			SDL_RenderPresent(renderer);
-			myGB.modifyBit(myGB.memory[0xFF0F], 1, 0);
+			myGB.modifyBit(myGB.memory[IF], 1, 0);
 		}
 			
 		// If LY exceeds its maximum value, reset it (end of V-Blank period).
-		if (myGB.memory[0xFF44] > 0x99)
-			myGB.memory[0xFF44] = 0x00;
+		if (myGB.memory[LY] > 0x99)
+			myGB.memory[LY] = 0x00;
 		
 	}
 }
