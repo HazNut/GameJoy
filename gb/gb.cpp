@@ -69,6 +69,7 @@ void gb::initialize()
 	memory[0xFFFF] = 0x00;
 
 	PC = 0x100; // Program counter starts at 0x100 after boot.
+
 }
 
 // Load a ROM.
@@ -97,7 +98,6 @@ void gb::loadGame()
 // Emulate a cycle of the Game Boy.
 void gb::emulateCycle()
 {
-
 	// If scheduled to set the IME, check if it should occur on this cycle. If it should, set it, otherwise do it next cycle.
 	if (scheduleIME)
 	{

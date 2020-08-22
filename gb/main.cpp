@@ -97,7 +97,7 @@ int main(int argc, char** argv)
 	SDL_RenderSetScale(renderer, 2, 2);
 	SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, SDL_CreateRGBSurface(0, 160, 144, 24, 0, 0, 0, 0));
 	SDL_Event e;
-
+	const Uint8* kb = SDL_GetKeyboardState(NULL);
 	// Set up the Game Boy and load the game.
 	myGB.initialize();
 	myGB.loadGame();
@@ -106,6 +106,7 @@ int main(int argc, char** argv)
 	int x = 0;
 	unsigned char scrollX, scrollY, currTile;
 	unsigned int mapBaseVal, mapOffset, tileStartByte;
+	int cycles = 0;
 	myGB.memory[0xFF44] = 0x0;
 
 	// Keep emulating CPU cycles.
@@ -114,8 +115,53 @@ int main(int argc, char** argv)
 		
 		for (int i = 0; i < 456; i++)
 		{
-			myGB.memory[0xFF00] = 0xFF;
 			myGB.emulateCycle();
+			cycles += 1;
+			if (cycles == 100)
+			{
+				SDL_PumpEvents();
+				cycles = 0;
+			}
+				
+			if ((myGB.memory[0xFF00] >> 5) == 0)
+			{
+				if (kb[SDL_SCANCODE_P])
+					myGB.modifyBit(myGB.memory[0xFF00], 0, 0);
+				else
+					myGB.modifyBit(myGB.memory[0xFF00], 1, 0);
+				if (kb[SDL_SCANCODE_O]) 
+					myGB.modifyBit(myGB.memory[0xFF00], 0, 1);
+				else
+					myGB.modifyBit(myGB.memory[0xFF00], 1, 1);
+				if (kb[SDL_SCANCODE_K]) 
+					myGB.modifyBit(myGB.memory[0xFF00], 0, 2);
+				else
+					myGB.modifyBit(myGB.memory[0xFF00], 1, 2);
+				if (kb[SDL_SCANCODE_L]) 
+					myGB.modifyBit(myGB.memory[0xFF00], 0, 3);
+				else
+					myGB.modifyBit(myGB.memory[0xFF00], 1, 3);
+			}
+
+			else if ((myGB.memory[0xFF00] >> 4) == 0)
+			{
+				if (kb[SDL_SCANCODE_D]) 
+					myGB.modifyBit(myGB.memory[0xFF00], 0, 0);
+				else
+					myGB.modifyBit(myGB.memory[0xFF00], 1, 0);
+				if (kb[SDL_SCANCODE_A]) 
+					myGB.modifyBit(myGB.memory[0xFF00], 0, 1);
+				else
+					myGB.modifyBit(myGB.memory[0xFF00], 1, 1);
+				if (kb[SDL_SCANCODE_W]) 
+					myGB.modifyBit(myGB.memory[0xFF00], 0, 2);
+				else
+					myGB.modifyBit(myGB.memory[0xFF00], 1, 2);
+				if (kb[SDL_SCANCODE_S])
+					myGB.modifyBit(myGB.memory[0xFF00], 0, 3);
+				else
+					myGB.modifyBit(myGB.memory[0xFF00], 1, 3);
+			}
 		}
 		
 	
@@ -177,12 +223,11 @@ int main(int argc, char** argv)
 			myGB.memory[0xFF44] = 0x00;
 			
 		}
-			
-		while (SDL_PollEvent(&e))
+		
+		if (SDL_PollEvent(&e) != 0)
 		{
 			1;
 		}
-		
 
 		/*LY = myGB.memory[0xFF44];
 
