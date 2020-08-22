@@ -1,5 +1,6 @@
 #pragma once
 #include <stdio.h>
+
 class gb
 {
 private:
@@ -12,6 +13,7 @@ private:
 	bool scheduleIME; // If IME is scheduled to be set or not.
 	int cyclesBeforeEnableIME = 1; // Cycles before IME update.
 	unsigned char intVectors[5] = { 0x40, 0x48, 0x50, 0x58, 0x60 }; // Jump vectors for interrupts.
+	bool logging = true; // Set to log processor state to output.txt.
 
 public:
 	FILE* pFile; // Pointer for log file.
@@ -45,6 +47,6 @@ public:
 	void SWAP(unsigned char& val); // Swaps the upper and lower nibble of a byte.
 	void CALL(); // Calls the next memory address.
 	void RST(unsigned char vec); // Calls a given memory address.
-	void EI();
-	void DI();
+	void EI(); // Enable interrupts.
+	void DI(); // Disable interrupts.
 };

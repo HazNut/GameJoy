@@ -1,19 +1,19 @@
 #include "gb.h"
 #include <stdio.h>
 #include <fstream>
-#include <iostream>
-#include <iomanip>
-#include <Windows.h>
 
 using namespace std;
 
 // Initialize the Game Boy by setting the register values.
 void gb::initialize()
 {
-	// Sets up log file.
-	//remove("output.txt");
-	//fopen_s(&pFile, "output.txt", "a");
-
+	// Sets up log file if logging.
+	if (logging)
+	{
+		remove("output.txt");
+		fopen_s(&pFile, "output.txt", "a");
+	}
+	
 	// Sets all memory locations to zero.
 	for (int i = 0x0000; i <= 0xFFFF; i++)
 		memory[i] = 0x0;
@@ -82,7 +82,7 @@ void gb::loadGame()
 	if (file.is_open())
 	{
 		size = file.tellg();
-		memblock = new char[size];
+		memblock = new char[unsigned int (size) + 1]; // Add 1 to hold escape code.
 		file.seekg(0, ios::beg);
 		file.read(memblock, size);
 		file.close();
@@ -143,18 +143,20 @@ void gb::emulateCycle()
 
 	if (opcode == 0xCB) // Some instructions are prefixed with CB.
 	{
-		// Get the opcode after the prefix.
-		
 
-		// Print the current opcode and other info to the output log.
-		_itoa_s(opcode, opcodeStr, 16);
-		//fprintf(pFile, "A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X (%s %X %X %X)\n", A, F, B, C, D, E, H, L, SP, PC, opcodeStr, memory[PC + 1], memory[PC + 2], memory[PC + 3]);
-		//fprintf(pFile, "\nOpcode after prefix is %s, PC is %X. SP = %X\n", opcodeStr, PC, SP);
-		//fprintf(pFile, "Next bytes are %X and %X\n", memory[PC + 1], memory[PC + 2]);
-		//fprintf(pFile, "A = %X, B = %X, C = %X, D = %X, E = %X, F = %X, H = %X L = %X, LY = %X\n", A, B, C, D, E, F, H, L, memory[0xFF44]);
-		//fprintf(pFile, "HL = %X, BC = %X, DE = %X, SP = %X\n", combineReg(H, L), combineReg(B, C), combineReg(D, E), SP);
+		// Print the current opcode and other info to the output log if logging.
+
+		if (logging)
+		{
+			_itoa_s(opcode, opcodeStr, 16);
+			fprintf(pFile,
+				"A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X (%s %X %X %X)\n",
+				A, F, B, C, D, E, H, L, SP, PC, opcodeStr, memory[PC + 1], memory[PC + 2], memory[PC + 3]);
+		}
+		
 		PC += 1;
 		opcode = memory[PC];
+		
 		// Check each half of the opcode to get to the required instruction.
 		switch (opcode & 0xF0)
 		{
@@ -1519,16 +1521,18 @@ void gb::emulateCycle()
 			break;
 		}
 	}
+
 	else // Some instructions are not prefixed.
 	{
-		// Print out the opcode and other info to the log.
-		_itoa_s(opcode, opcodeStr, 16);
-		//printf("%s\n", opcodeStr);
-		//fprintf(pFile, "A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X (%s %X %X %X)\n", A, F, B, C, D, E, H, L, SP, PC, opcodeStr, memory[PC + 1], memory[PC + 2], memory[PC + 3]);
-		/*fprintf(pFile, "Next bytes are %X and %X\n", memory[PC + 1], memory[PC + 2]);
-		fprintf(pFile, "A = %X, B = %X, C = %X, D = %X, E = %X, F = %X, H = %X L = %X, LY = %X\n", A, B, C, D, E, F, H, L, memory[0xFF44]);
-		fprintf(pFile, "HL = %X, BC = %X, DE = %X, SP = %X\n", combineReg(H, L), combineReg(B, C), combineReg(D, E), SP);*/
-
+		// Print out the opcode and other info to the log if logging.
+		if (logging)
+		{
+			_itoa_s(opcode, opcodeStr, 16);
+			fprintf(pFile,
+				"A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X (%s %X %X %X)\n",
+				A, F, B, C, D, E, H, L, SP, PC, opcodeStr, memory[PC + 1], memory[PC + 2], memory[PC + 3]);
+		}
+		
 		switch (opcode & 0xF0) 
 		{
 		case 0x00:
@@ -1630,7 +1634,6 @@ void gb::emulateCycle()
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // STOP
-				//printf("STOP\n");
 				PC += 1;
 				break;
 
@@ -2272,7 +2275,6 @@ void gb::emulateCycle()
 				break;
 
 			case 0x06: // HALT
-				//printf("HALT\n");
 				PC += 1;
 				break;
 
@@ -3004,7 +3006,6 @@ void gb::emulateCycle()
 				break;
 
 			case 0x03: // DI
-				//printf("DI\n");
 				DI();
 				PC += 1;
 				break;
@@ -3085,36 +3086,6 @@ void gb::emulateCycle()
 
 	
 	updateFlagReg(); // Update F with the new flag values.
-
-	/*memory[0xFF04] += 1;
-
-	int freq = 0;
-	switch (memory[0xFF07])
-	{
-	case 0x00:
-		freq = 4069;
-		break;
-
-	case 0x01:
-		freq = 262144;
-		break;
-
-	case 0x10:
-		freq = 65536;
-		break;
-
-	case 0x11:
-		freq = 16384;
-		break;
-	}
-
-	if (memory[0xFF05] + freq > 0xFF)
-	{
-		memory[0xFF05] = memory[0xFF06];
-		modifyBit(memory[0xFF0F], 1, 2);
-	}
-	else
-		memory[0xFF05] += freq;*/
 }
 
 // Updates F with the new flag values.
@@ -3155,6 +3126,8 @@ int gb::checkHalfCarry(unsigned char a, unsigned char b, char mode)
 			return 1;
 		else
 			return 0;
+	
+	return Hb; // Return current Hb if incorrect mode entered.
 }
 
 // Check if the half-carry bit should be set for an addition/subtraction of two 16-bit values.
@@ -3171,6 +3144,8 @@ int gb::checkHalfCarry(unsigned int val1, unsigned int val2, char mode)
 			return 1;
 		else
 			return 0;
+
+	return Hb; // Return current Hb if incorrect mode entered.
 }
 
 // Check if the zero flag should be set based on a input value.
@@ -3284,8 +3259,9 @@ void gb::SUB(unsigned char val, bool carry)
 	// Subtracting the given value and the carry bit.
 	if (carry)
 	{
-		/*The value of the carry bit is calculated before subtracting. However, we need to subtract the carry bit after, so we
-		store the new value here and update the carry bit after subtracting.*/
+		/*The value of the carry bit is calculated before subtracting. However, we need 
+		to subtract the carry bit after, so we store the new value here and update the carry 
+		bit after subtracting.*/
 		unsigned char newCb = (val + Cb > A);
 
 		Hb = (((A & 0xF) < (val & 0xF) + Cb));
