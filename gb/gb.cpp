@@ -1,8 +1,8 @@
 #include "gb.h"
-#include <stdio.h>
 #include <fstream>
 
 using namespace std;
+
 
 // Initialize the Game Boy by setting the register values.
 void gb::initialize()
@@ -131,8 +131,8 @@ void gb::emulateCycle()
 		}
 	}
 
-	opcode = memory[PC]; // Get the current opcode.
-	char opcodeStr[3];   // Can store the opcode in a string so it can be printed.
+	opcode = memory[PC];	// Get the current opcode.
+	char opcodeStr[3];		// Can store the opcode in a string so it can be printed.
 
 	// Print test output from the serial port.
 	if (memory[0xFF02] == 0x81)
@@ -141,7 +141,7 @@ void gb::emulateCycle()
 		memory[0xFF02] = 0x01;
 	}
 
-	if (opcode == 0xCB) // Some instructions are prefixed with CB.
+	if (opcode == 0xCB)		// Some instructions are prefixed with CB.
 	{
 
 		// Print the current opcode and other info to the output log if logging.
@@ -160,7 +160,7 @@ void gb::emulateCycle()
 		// Check each half of the opcode to get to the required instruction.
 		switch (opcode & 0xF0)
 		{
-		case 0x00: // Rotations without carry.
+		case 0x00:	// Rotations without carry.
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // RLC B

@@ -94,13 +94,13 @@ int main(int argc, char** argv)
 	myGB.initialize();
 	myGB.loadGame();
 
-	unsigned int gfxArray [160 * 144]; // Stores the RGB value of each pixel.
-	int x = 0; // The x coordinate on the current scanline to be rendered.
-	unsigned char scrollX, scrollY; // Where the background is in relation to the rendering window.
-	unsigned char currTile; // The current tile to have a line rendered.
-	unsigned int mapBaseVal, mapOffset, tileStartByte; // Pointers to memory locations related to tiles.
-	int cyclesSinceLastUpdate = 0; // Every 100 cycles of the CPU, update the keyboard state.
-	myGB.memory[LY] = 0x0; // LY set to 0; this means we are rendering the first scanline.
+	unsigned int gfxArray [160 * 144];					// Stores the RGB value of each pixel.
+	int x = 0;											// The x coordinate on the current scanline to be rendered.
+	unsigned char scrollX, scrollY;						// Where the background is in relation to the rendering window.
+	unsigned char currTile;								// The current tile to have a line rendered.
+	unsigned int mapBaseVal, mapOffset, tileStartByte;	// Pointers to memory locations related to tiles.
+	int cyclesSinceLastUpdate = 0;						// Every 100 cycles of the CPU, update the keyboard state.
+	myGB.memory[LY] = 0x0;								// LY set to 0; this means we are rendering the first scanline.
 
 	// Keep emulating until the end of time itself.
 	for (;;)
@@ -114,12 +114,12 @@ int main(int argc, char** argv)
 			// Update input state every 100 cycles to prevent slowdown.
 			if (cyclesSinceLastUpdate == 100)
 			{
-				SDL_PumpEvents(); // This updates the keyboard state.
+				SDL_PumpEvents();	// This updates the keyboard state.
 				cyclesSinceLastUpdate = 0;
 			}
 			cyclesSinceLastUpdate += 1;
 			
-			processInputs(kb); // Processes keyboard inputs if the input state is requested by the Game Boy.
+			processInputs(kb);		// Processes keyboard inputs if the input state is requested by the Game Boy.
 			
 		}
 		
@@ -146,26 +146,34 @@ int main(int argc, char** argv)
 
 				// Here we calculate the current tile to have its line drawn (very ugly). Background wraps around.
 
-				if (myGB.memory[LY] + scrollY >= 256) // If reached bottom of background, wrap back to the top.
+				// If reached bottom of background, wrap back to the top.
+				if (myGB.memory[LY] + scrollY >= 256)			
 					mapOffset = (((x + scrollX) / 8) % 32) + (((myGB.memory[LY] + scrollY - 256) / 8) * 32);
-				else if (x + scrollX >= 256) // X wrapping - right wraps back to left.
+
+				// X wrapping - right wraps back to left.
+				else if (x + scrollX >= 256)					
 					mapOffset = (((x + scrollX - 256) / 8) % 32) + (((myGB.memory[LY] + scrollY) / 8) * 32);
-				else if ((x + scrollX >= 256) && (myGB.memory[LY] + scrollY >= 256)) // X and Y wrap.
+
+				// X and Y wrap.
+				else if ((x + scrollX >= 256) && (myGB.memory[LY] + scrollY >= 256)) 
 					mapOffset = (((x + scrollX - 256) / 8) % 32) + (((myGB.memory[LY] + scrollY - 256) / 8) * 32);
-				else // Regular, no wrapping.
+
+				// Regular, no wrapping.
+				else											
 					mapOffset = (((x + scrollX) / 8) % 32) + (((myGB.memory[LY] + scrollY) / 8) * 32);
 				
-				currTile = myGB.memory[mapBaseVal + mapOffset]; // Gets the tile number from the tile map.
+				currTile = myGB.memory[mapBaseVal + mapOffset];	// Gets the tile number from the tile map.
 			
+
 				// Gets the memory location of the start of the tile data using the correct method.
 				if ((myGB.memory[LCDC] >> 4) & 0x1)
-					tileStartByte = 0x8000 + (currTile * 16); // 8000 addressing (unsigned).
+					tileStartByte = 0x8000 + (currTile * 16);					// 8000 addressing (unsigned).
 				else
 				{
-					tileStartByte = 0x9000 + (signed char(currTile) * 16); // 8800 addressing (signed).
+					tileStartByte = 0x9000 + (signed char(currTile) * 16);		// 8800 addressing (signed).
 				}
 					
-				drawLineOfTile(gfxArray, tileStartByte, x, myGB.memory[LY]); // Draw a line of the current tile.
+				drawLineOfTile(gfxArray, tileStartByte, x, myGB.memory[LY]);	// Draw a line of the current tile.
 			}
 		}
 	
