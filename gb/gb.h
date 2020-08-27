@@ -11,6 +11,11 @@ constexpr unsigned int SCROLLY = 0xFF42;
 constexpr unsigned int SCROLLX = 0xFF43;
 constexpr unsigned int LY = 0xFF44;
 constexpr unsigned int BGP = 0xFF47;
+constexpr unsigned int WINY = 0xFF4A;
+constexpr unsigned int WINX = 0xFF4B;
+constexpr unsigned int IE = 0xFFFF;
+
+
 
 class gb
 {
@@ -25,7 +30,7 @@ private:
 	bool scheduleIME;														// If IME is scheduled to be set or not.
 	int cyclesBeforeEnableIME = 1;											// Cycles before IME update.
 	unsigned char intVectors[5] = { 0x40, 0x48, 0x50, 0x58, 0x60 };			// Jump vectors for interrupts.
-	bool logging = false;													// Set to log CPU state to output.txt.
+	
 
 	// General functions.
 	void updateFlagReg();													// Alter the flags in the flag register.
@@ -35,7 +40,7 @@ private:
 	unsigned int combineReg(unsigned char r1, unsigned char r2);			// Combine 2 registers into 1 16-bit register.
 	void splitReg(unsigned char& r1, unsigned char& r2, unsigned int r3);	// Put a combined register's values back into the originals.
 
-	// Implementations of some opcodes.
+	// Implementations of some opcodes. Capitalised as some names are keywords in C++ e.g. xor.
 	void INC(unsigned char& r);												// Increment a byte.
 	void INC(unsigned int& val);											// Increment a 16-bit value.
 	void DEC(unsigned char& val);											// Decrement a byte.
@@ -63,5 +68,6 @@ public:
 	void loadGame();														// Load the game into memory.
 	void emulateCycle();													// Emulate an instruction.
 	void modifyBit(unsigned char &r, int val, int pos);						// Modify a bit in a byte.
+	bool logging = false;													// Set to log CPU state to output.txt.
 };
 #endif GB_H

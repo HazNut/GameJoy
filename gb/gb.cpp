@@ -1,21 +1,18 @@
 #include "gb.h"
 #include <fstream>
-
-using namespace std;
-
+#include <iostream>
 
 // Initialize the Game Boy by setting the register values.
 void gb::initialize()
 {
 	// Sets up log file if logging.
-	if (logging)
-	{
-		remove("output.txt");
-		fopen_s(&pFile, "output.txt", "a");
-	}
+	
+	remove("output.txt");
+	fopen_s(&pFile, "output.txt", "a");
+	
 	
 	// Sets all memory locations to zero.
-	for (int i = 0x0000; i <= 0xFFFF; i++)
+	for (int i = 0x0000; i <= 0xFFFF; i++) 
 		memory[i] = 0x0;
 
 	// Set values of CPU registers.
@@ -75,15 +72,15 @@ void gb::initialize()
 // Load a ROM.
 void gb::loadGame()
 {
-	streampos size;
+	std::streampos size;
 	char* memblock;
 
-	ifstream file("tetris.gb", ios::in | ios::binary | ios::ate);
+	std::ifstream file("tetris.gb", std::ios::in | std::ios::binary | std::ios::ate);
 	if (file.is_open())
 	{
 		size = file.tellg();
 		memblock = new char[unsigned int (size) + 1]; // Add 1 to hold escape code.
-		file.seekg(0, ios::beg);
+		file.seekg(0, std::ios::beg);
 		file.read(memblock, size);
 		file.close();
 		printf("ROM loaded.\n");
@@ -98,6 +95,17 @@ void gb::loadGame()
 // Emulate a cycle of the Game Boy.
 void gb::emulateCycle()
 {
+	//// DMA
+	/*for (int i = 0; i < 160; i++)
+		memory[0xFE00 | i] = memory[(memory[0xFF46] * 100) | i];*/
+	
+
+
+	if (memory[0x2000] != 0x20)
+		memory[0x2000] = 0x20;
+
+
+
 	// If scheduled to set the IME, check if it should occur on this cycle. If it should, set it, otherwise do it next cycle.
 	if (scheduleIME)
 	{
@@ -112,20 +120,23 @@ void gb::emulateCycle()
 	// Handle interrupts
 	if (IME)
 	{
+	
 		for (int i = 0; i < 5; i++)
 		{
-			if (((memory[0xFF0F] >> i) & 0x1) == 1)
+			if (((memory[IF] >> i) & 0x1) == 1)
 			{
-				if (((memory[0xFFFF] >> i) & 0x1) == 1)
+				if (((memory[IE] >> i) & 0x1) == 1)
 				{
-					modifyBit(memory[0xFF0F], 0, i);
+
+					modifyBit(memory[IF], 0, i);
 					DI();
 					memory[SP - 1] = PC >> 8;
 					memory[SP - 2] = PC & 0xFF;
 					SP -= 2;
 					PC = intVectors[i];
-					return;
-
+					if (logging)
+						fprintf(pFile, "INTERRUPT %u\n", i);
+					break;
 				}
 			}
 		}
@@ -133,13 +144,6 @@ void gb::emulateCycle()
 
 	opcode = memory[PC];	// Get the current opcode.
 	char opcodeStr[3];		// Can store the opcode in a string so it can be printed.
-
-	// Print test output from the serial port.
-	if (memory[0xFF02] == 0x81)
-	{
-		printf("%c", memory[0xFF01]);
-		memory[0xFF02] = 0x01;
-	}
 
 	if (opcode == 0xCB)		// Some instructions are prefixed with CB.
 	{
@@ -2811,7 +2815,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x03:
-				printf("Unknown instruction D3!\n");
+				std::cerr << "Unknown instruction D3!\n";
 				PC += 1;
 				break;
 
@@ -2868,7 +2872,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x0B:
-				printf("Unknown instruction DB!\n");
+				std::cerr << "Unknown instruction DB!\n";
 				PC += 1;
 				break;
 
@@ -2880,7 +2884,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x0D:
-				printf("Unknown instruction DD!\n");
+				std::cerr << "Unknown instruction DD!\n";
 				PC += 1;
 				break;
 
@@ -2916,12 +2920,12 @@ void gb::emulateCycle()
 				break;
 
 			case 0x03:
-				printf("Unknown instruction E3!\n");
+				std::cerr << "Unknown instruction E3!\n";
 				PC += 1;
 				break;
 
 			case 0x04:
-				printf("Unknown instruction E4!\n");
+				std::cerr << "Unknown instruction E4!\n";
 				PC += 1;
 				break;
 
@@ -2956,17 +2960,17 @@ void gb::emulateCycle()
 				break;
 
 			case 0x0B:
-				printf("Unknown instruction EB!\n");
+				std::cerr << "Unknown instruction EB!\n";
 				PC += 1;
 				break;
 
 			case 0x0C:
-				printf("Unknown instruction EC!\n");
+				std::cerr << "Unknown instruction EC!\n";
 				PC += 1;
 				break;
 
 			case 0x0D:
-				printf("Unknown instruction ED!\n");
+				std::cerr << "Unknown instruction ED!\n";
 				PC += 1;
 				break;
 
@@ -3011,7 +3015,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x04:
-				printf("Unknown instruction F4!\n");
+				std::cerr << "Unknown instruction F4!\n";
 				PC += 1;
 				break;
 
@@ -3062,12 +3066,12 @@ void gb::emulateCycle()
 				break;
 
 			case 0x0C:
-				printf("Unknown instruction FC!\n");
+				std::cerr << "Unknown instruction FC!\n";
 				PC += 1;
 				break;
 
 			case 0x0D:
-				printf("Unknown instruction FD!\n");
+				std::cerr << "Unknown instruction FD!\n";
 				PC += 1;
 				break;
 

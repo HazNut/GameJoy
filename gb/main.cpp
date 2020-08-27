@@ -1,5 +1,6 @@
 #include "gb.h"
 #include "SDL.h"
+#include <algorithm>
 
 gb myGB; // The Game Boy's CPU is stored as an object.
 
@@ -57,7 +58,7 @@ void processInputs(const Uint8* kb)
 }
 
 // Draw a line of the currently selected tile.
-void drawLineOfTile(unsigned int(&gfxArray)[160 * 144], unsigned int memLocation, int x, int y)
+void drawLineOfTile(unsigned int gfxArray[160 * 144], unsigned int memLocation, int x, int y)
 {
 	// Pixel info is stored across 2 bytes per row.
 	int byte = (y % 8) * 2;
@@ -72,13 +73,135 @@ void drawLineOfTile(unsigned int(&gfxArray)[160 * 144], unsigned int memLocation
 	unsigned int total = lowBit + (highBit * 2);
 
 	// The total gives the shade of grey to be used for the pixel.
-	unsigned char shade = myGB.memory[BGP] >> (total * 2);
+	unsigned char shade = myGB.memory[BGP] >> total;
 
 	// Now add this grey shade to the RGB array.
 	gfxArray[(x % 160) + (y * 160)] = ((shade << 16) | (shade << 8) | shade);
 }
 
-int main(int argc, char** argv)
+void drawBackground(unsigned int gfxArray[160 * 144])
+{
+	unsigned char scrollX, scrollY;						// Where the background is in relation to the rendering window.
+	unsigned char currTile;								// The current tile to have a line rendered.
+	unsigned int mapBaseVal, mapOffset, tileStartByte;	// Pointers to memory locations related to tiles.
+
+	// Get scroll values.
+	scrollX = myGB.memory[SCROLLX];
+	scrollY = myGB.memory[SCROLLY];
+
+	// Get the tile map base pointer to use.
+	if (((myGB.memory[LCDC] >> 3) & 0x1))
+		mapBaseVal = 0x9C00;
+
+	else
+		mapBaseVal = 0x9800;
+
+	// If not in V-Blank, render a scanline. This is done by drawing a line of pixels from consecutive tiles.
+	if (myGB.memory[LY] < 0x90)
+	{
+		for (int x = 0; x < 160; x++)
+		{
+
+			// Here we calculate the current tile to have its line drawn (very ugly). Background wraps around.
+
+			// If reached bottom of background, wrap back to the top.
+			if (myGB.memory[LY] + scrollY >= 256)
+				mapOffset = (((x + scrollX) / 8) % 32) + (((myGB.memory[LY] + scrollY - 256) / 8) * 32);
+
+			// X wrapping - right wraps back to left.
+			else if (x + scrollX >= 256)
+				mapOffset = (((x + scrollX - 256) / 8) % 32) + (((myGB.memory[LY] + scrollY) / 8) * 32);
+
+			// X and Y wrap.
+			else if ((x + scrollX >= 256) && (myGB.memory[LY] + scrollY >= 256))
+				mapOffset = (((x + scrollX - 256) / 8) % 32) + (((myGB.memory[LY] + scrollY - 256) / 8) * 32);
+
+			// Regular, no wrapping.
+			else
+				mapOffset = (((x + scrollX) / 8) % 32) + (((myGB.memory[LY] + scrollY) / 8) * 32);
+
+			currTile = myGB.memory[mapBaseVal + mapOffset];	// Gets the tile number from the tile map.
+
+
+			// Gets the memory location of the start of the tile data using the correct method.
+			if ((myGB.memory[LCDC] >> 4) & 0x1)
+				tileStartByte = 0x8000 + (currTile * 16);					// 8000 addressing (unsigned).
+			else
+			{
+				tileStartByte = 0x9000 + (signed char(currTile) * 16);		// 8800 addressing (signed).
+			}
+
+			drawLineOfTile(gfxArray, tileStartByte, x, myGB.memory[LY]);	// Draw a line of the current tile.
+		}
+	}
+}
+
+void drawWindow(unsigned int gfxArray[160 * 144])
+{
+	unsigned char winX, winY;						// Where the background is in relation to the rendering window.
+	unsigned char currTile;								// The current tile to have a line rendered.
+	unsigned int mapBaseVal, mapOffset, tileStartByte;	// Pointers to memory locations related to tiles.
+
+	// Get scroll values.
+	winX = myGB.memory[WINX];
+	winY = myGB.memory[WINY];
+
+	// Get the tile map base pointer to use.
+	if (((myGB.memory[LCDC] >> 6) & 0x1))
+		mapBaseVal = 0x9C00;
+
+	else
+		mapBaseVal = 0x9800;
+
+	// If not in V-Blank, render a scanline. This is done by drawing a line of pixels from consecutive tiles.
+	if (myGB.memory[LY] < 0x90)
+	{
+		for (int x = 0; x < 160; x++)
+		{
+
+			// Here we calculate the current tile to have its line drawn (very ugly). Background wraps around.
+
+			// If reached bottom of background, wrap back to the top.
+			mapOffset = (((x + winX) / 8) % 32) + (((myGB.memory[LY] + winY) / 8) * 32);
+
+			currTile = myGB.memory[mapBaseVal + mapOffset];	// Gets the tile number from the tile map.
+
+
+			// Gets the memory location of the start of the tile data using the correct method.
+			if ((myGB.memory[LCDC] >> 4) & 0x1)
+				tileStartByte = 0x8000 + (currTile * 16);					// 8000 addressing (unsigned).
+			else
+			{
+				tileStartByte = 0x9000 + (signed char(currTile) * 16);		// 8800 addressing (signed).
+			}
+
+			drawLineOfTile(gfxArray, tileStartByte, x, myGB.memory[LY]);	// Draw a line of the current tile.
+		}
+	}
+}
+
+void drawSprites(unsigned int gfxArray[160 * 144])
+{
+	int x, y, currTile, tileStartByte;
+
+	if (myGB.memory[LY] < 0x90)
+	{
+		for (int sprite = 0; sprite < 40; sprite++)
+		{
+			y = myGB.memory[0xFE00 + (sprite * 4)];
+	
+			if (myGB.memory[LY] == std::clamp((int)myGB.memory[LY], y, y + 8))
+			{
+				x = myGB.memory[0xFE00 + (sprite * 4) + 1];
+				currTile = myGB.memory[0xFE00 + (sprite * 4) + 2];
+				tileStartByte = 0x8000 + (currTile * 16);
+				drawLineOfTile(gfxArray, tileStartByte, x, myGB.memory[LY]);
+			}
+		}	
+	}
+}
+
+int main(int argc, char* args[])
 {
 
 	// Set up the graphics environment.
@@ -94,13 +217,10 @@ int main(int argc, char** argv)
 	myGB.initialize();
 	myGB.loadGame();
 
-	unsigned int gfxArray [160 * 144];					// Stores the RGB value of each pixel.
-	int x = 0;											// The x coordinate on the current scanline to be rendered.
-	unsigned char scrollX, scrollY;						// Where the background is in relation to the rendering window.
-	unsigned char currTile;								// The current tile to have a line rendered.
-	unsigned int mapBaseVal, mapOffset, tileStartByte;	// Pointers to memory locations related to tiles.
-	int cyclesSinceLastUpdate = 0;						// Every 100 cycles of the CPU, update the keyboard state.
-	myGB.memory[LY] = 0x0;								// LY set to 0; this means we are rendering the first scanline.
+	unsigned int* gfxArray = new unsigned int [160 * 144];	// Stores the RGB value of each pixel.
+	int x = 0;												// The x coordinate on the current scanline to be rendered.
+	
+	int cyclesSinceLastUpdate = 0;							// Every 100 cycles of the CPU, update the keyboard state.
 
 	// Keep emulating until the end of time itself.
 	for (;;)
@@ -110,75 +230,44 @@ int main(int argc, char** argv)
 		for (int i = 0; i < 456; i++)
 		{
 			myGB.emulateCycle();
-
+			cyclesSinceLastUpdate += 1;
 			// Update input state every 100 cycles to prevent slowdown.
 			if (cyclesSinceLastUpdate == 100)
 			{
 				SDL_PumpEvents();	// This updates the keyboard state.
 				cyclesSinceLastUpdate = 0;
+				if (kb[SDL_SCANCODE_SPACE])
+					myGB.logging = !myGB.logging;
 			}
-			cyclesSinceLastUpdate += 1;
 			
 			processInputs(kb);		// Processes keyboard inputs if the input state is requested by the Game Boy.
 			
 		}
 		
-		// After setting the V-Blank interrupt, it can be reset.
-		if (myGB.memory[IF] & 0x1)
-			myGB.modifyBit(myGB.memory[IF], 0, 0);
-
-		// Get scroll values.
-		scrollX = myGB.memory[SCROLLX];
-		scrollY = myGB.memory[SCROLLY];
-	
-		// Get the tile map base pointer to use.
-		if (((myGB.memory[LCDC] >> 3) & 0x1))
-			mapBaseVal = 0x9C00;
-			
-		else
-			mapBaseVal = 0x9800;
-			
-		// If not in V-Blank, render a scanline. This is done by drawing a line of pixels from consecutive tiles.
+		// If not in VBLANK, draw to the screen.
 		if (myGB.memory[LY] < 0x90)
 		{
-			for (int x = 0; x < 160; x++)
-			{
+			drawBackground(gfxArray);
 
-				// Here we calculate the current tile to have its line drawn (very ugly). Background wraps around.
+			// Draw window if enabled.
+			if ((myGB.memory[LCDC] >> 5) & 0x1)
+				drawWindow(gfxArray);
+		//drawSprites(gfxArray);
 
-				// If reached bottom of background, wrap back to the top.
-				if (myGB.memory[LY] + scrollY >= 256)			
-					mapOffset = (((x + scrollX) / 8) % 32) + (((myGB.memory[LY] + scrollY - 256) / 8) * 32);
-
-				// X wrapping - right wraps back to left.
-				else if (x + scrollX >= 256)					
-					mapOffset = (((x + scrollX - 256) / 8) % 32) + (((myGB.memory[LY] + scrollY) / 8) * 32);
-
-				// X and Y wrap.
-				else if ((x + scrollX >= 256) && (myGB.memory[LY] + scrollY >= 256)) 
-					mapOffset = (((x + scrollX - 256) / 8) % 32) + (((myGB.memory[LY] + scrollY - 256) / 8) * 32);
-
-				// Regular, no wrapping.
-				else											
-					mapOffset = (((x + scrollX) / 8) % 32) + (((myGB.memory[LY] + scrollY) / 8) * 32);
-				
-				currTile = myGB.memory[mapBaseVal + mapOffset];	// Gets the tile number from the tile map.
-			
-
-				// Gets the memory location of the start of the tile data using the correct method.
-				if ((myGB.memory[LCDC] >> 4) & 0x1)
-					tileStartByte = 0x8000 + (currTile * 16);					// 8000 addressing (unsigned).
-				else
-				{
-					tileStartByte = 0x9000 + (signed char(currTile) * 16);		// 8800 addressing (signed).
-				}
-					
-				drawLineOfTile(gfxArray, tileStartByte, x, myGB.memory[LY]);	// Draw a line of the current tile.
-			}
 		}
-	
 		
+			
 		myGB.memory[LY] += 1; // Increment LY as a scanline has been drawn.
+
+		//// Check LY = LYC.
+		//if (myGB.memory[LY] == myGB.memory[0xFF45])
+		//	myGB.modifyBit(myGB.memory[IF], 1, 1);	// STAT interrupt.
+
+		//// Now in HBLANK.
+		//myGB.modifyBit(myGB.memory[0xFF41], 0, 0);
+		//myGB.modifyBit(myGB.memory[0xFF41], 0, 1);
+		//myGB.modifyBit(myGB.memory[IF], 1, 1);	// STAT interrupt.
+		
 
 		// Once all scanlines have been drawn, render to the screen and set the V-Blank interrupt.
 		if (myGB.memory[LY] == 0x90)
@@ -186,12 +275,24 @@ int main(int argc, char** argv)
 			SDL_UpdateTexture(texture, NULL, gfxArray, 160 * 4);
 			SDL_RenderCopy(renderer, texture, NULL, NULL);
 			SDL_RenderPresent(renderer);
-			myGB.modifyBit(myGB.memory[IF], 1, 0);
+			myGB.modifyBit(myGB.memory[IF], 1, 0);	// VBLANK interrupt.
+
+			//// Set mode flag in STAT for VBLANK.
+			//myGB.modifyBit(myGB.memory[0xFF41], 1, 0);
+			//myGB.modifyBit(myGB.memory[0xFF41], 0, 1);
+			//myGB.modifyBit(myGB.memory[IF], 1, 1);	// STAT interrupt.
+
 		}
 			
 		// If LY exceeds its maximum value, reset it (end of V-Blank period).
 		if (myGB.memory[LY] > 0x99)
-			myGB.memory[LY] = 0x00;
-		
+		{
+			myGB.memory[LY] = 0x00;					// Reset LY.
+
+			//// Set mode flag in STAT for HBLANK.
+			//myGB.modifyBit(myGB.memory[0xFF41], 0, 0);
+			//myGB.modifyBit(myGB.memory[0xFF41], 0, 1);
+			//myGB.modifyBit(myGB.memory[IF], 1, 1);	// STAT interrupt.
+		}
 	}
 }
