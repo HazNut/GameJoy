@@ -58,7 +58,7 @@ void processInputs(const Uint8* kb)
 }
 
 // Draw a line of the currently selected tile.
-void drawLineOfTile(unsigned int gfxArray[160 * 144], unsigned int memLocation, int x, int y)
+void drawPixelOfTile(unsigned int gfxArray[160 * 144], unsigned int memLocation, int x, int y)
 {
 	// Pixel info is stored across 2 bytes per row.
 	int byte = (y % 8) * 2;
@@ -77,6 +77,31 @@ void drawLineOfTile(unsigned int gfxArray[160 * 144], unsigned int memLocation, 
 
 	// Now add this grey shade to the RGB array.
 	gfxArray[(x % 160) + (y * 160)] = ((shade << 16) | (shade << 8) | shade);
+}
+
+void drawPixelOfSprite(unsigned int gfxArray[160 * 144], unsigned int memLocation, int x, int y)
+{
+	// Pixel info is stored across 2 bytes per row.
+	int byte = (y % 8) * 2;
+	unsigned char lowByte = myGB.memory[memLocation + byte];
+	unsigned char highByte = myGB.memory[memLocation + byte + 1];
+
+	for (int i = 0; i < 8; i++)
+	{
+		// 2 bits per pixel, stored across the 2 bytes.
+		unsigned char lowBit = (lowByte >> (7 - i)) & 0x1;
+		unsigned char highBit = (highByte >> (7 - i)) & 0x1;
+
+		// The high and low bit are added together.
+		unsigned int total = lowBit + (highBit * 2);
+
+		// The total gives the shade of grey to be used for the pixel.
+		unsigned char shade = myGB.memory[BGP] >> total;
+
+		// Now add this grey shade to the RGB array.
+		gfxArray[((x + i) % 160) + (y * 160)] = ((shade << 16) | (shade << 8) | shade);
+	}
+	
 }
 
 void drawBackground(unsigned int gfxArray[160 * 144])
@@ -131,7 +156,7 @@ void drawBackground(unsigned int gfxArray[160 * 144])
 				tileStartByte = 0x9000 + (signed char(currTile) * 16);		// 8800 addressing (signed).
 			}
 
-			drawLineOfTile(gfxArray, tileStartByte, x, myGB.memory[LY]);	// Draw a line of the current tile.
+			drawPixelOfTile(gfxArray, tileStartByte, x, myGB.memory[LY]);	// Draw a line of the current tile.
 		}
 	}
 }
@@ -143,7 +168,7 @@ void drawWindow(unsigned int gfxArray[160 * 144])
 	unsigned int mapBaseVal, mapOffset, tileStartByte;	// Pointers to memory locations related to tiles.
 
 	// Get scroll values.
-	winX = myGB.memory[WINX];
+	winX = myGB.memory[WINX] - 7;
 	winY = myGB.memory[WINY];
 
 	// Get the tile map base pointer to use.
@@ -175,29 +200,34 @@ void drawWindow(unsigned int gfxArray[160 * 144])
 				tileStartByte = 0x9000 + (signed char(currTile) * 16);		// 8800 addressing (signed).
 			}
 
-			drawLineOfTile(gfxArray, tileStartByte, x, myGB.memory[LY]);	// Draw a line of the current tile.
+			drawPixelOfTile(gfxArray, tileStartByte, x, myGB.memory[LY]);	// Draw a line of the current tile.
 		}
 	}
 }
 
 void drawSprites(unsigned int gfxArray[160 * 144])
 {
-	int x, y, currTile, tileStartByte;
+	unsigned char x, y, currTile;
+	unsigned int tileStartByte;
 
-	if (myGB.memory[LY] < 0x90)
+	for (int sprite = 0; sprite < 40; sprite++)
 	{
-		for (int sprite = 0; sprite < 40; sprite++)
+		y = myGB.memory[0xFE00 + (sprite * 4)] - 16;
+		
+		if ((myGB.memory[LY] <= y + 7) && (myGB.memory[LY] >= y))
 		{
-			y = myGB.memory[0xFE00 + (sprite * 4)];
-	
-			if (myGB.memory[LY] == std::clamp((int)myGB.memory[LY], y, y + 8))
+			if ((y < 144) && (y > 0))
 			{
-				x = myGB.memory[0xFE00 + (sprite * 4) + 1];
-				currTile = myGB.memory[0xFE00 + (sprite * 4) + 2];
-				tileStartByte = 0x8000 + (currTile * 16);
-				drawLineOfTile(gfxArray, tileStartByte, x, myGB.memory[LY]);
+				x = myGB.memory[0xFE00 + (sprite * 4) + 1] - 8;
+				if ((x < 160) && (x > 0))
+				{
+					currTile = myGB.memory[0xFE00 + (sprite * 4) + 2];
+					tileStartByte = 0x8000 + (currTile * 16);
+					if ((myGB.memory[0xFE00 + (sprite * 4) + 3] >> 7) & 0x1)
+						drawPixelOfSprite(gfxArray, tileStartByte, x, myGB.memory[LY]);
+				}
 			}
-		}	
+		}
 	}
 }
 
@@ -221,7 +251,7 @@ int main(int argc, char* args[])
 	int x = 0;												// The x coordinate on the current scanline to be rendered.
 	
 	int cyclesSinceLastUpdate = 0;							// Every 100 cycles of the CPU, update the keyboard state.
-
+	myGB.modifyBit(myGB.memory[LCDC], 1, 7);
 	// Keep emulating until the end of time itself.
 	for (;;)
 	{
@@ -252,21 +282,28 @@ int main(int argc, char* args[])
 			// Draw window if enabled.
 			if ((myGB.memory[LCDC] >> 5) & 0x1)
 				drawWindow(gfxArray);
-		//drawSprites(gfxArray);
+			if ((myGB.memory[LCDC] >> 1) & 0x1)
+				drawSprites(gfxArray);
 
 		}
 		
 			
 		myGB.memory[LY] += 1; // Increment LY as a scanline has been drawn.
 
-		//// Check LY = LYC.
-		//if (myGB.memory[LY] == myGB.memory[0xFF45])
-		//	myGB.modifyBit(myGB.memory[IF], 1, 1);	// STAT interrupt.
+		// Check LY = LYC.
+		if (myGB.memory[LY] == myGB.memory[0xFF45])
+		{
+			myGB.modifyBit(myGB.memory[IF], 1, 2);	// STAT interrupt.
+			if ((myGB.memory[0xFF41] >> 6) & 0x1)
+				myGB.modifyBit(myGB.memory[IF], 1, 1);	// STAT interrupt.
+		}
+			
 
-		//// Now in HBLANK.
-		//myGB.modifyBit(myGB.memory[0xFF41], 0, 0);
-		//myGB.modifyBit(myGB.memory[0xFF41], 0, 1);
-		//myGB.modifyBit(myGB.memory[IF], 1, 1);	// STAT interrupt.
+		// Now in HBLANK.
+		myGB.modifyBit(myGB.memory[0xFF41], 0, 0);
+		myGB.modifyBit(myGB.memory[0xFF41], 0, 1);
+		if ((myGB.memory[0xFF41] >> 3) & 0x1)
+			myGB.modifyBit(myGB.memory[IF], 1, 1);	// STAT interrupt.
 		
 
 		// Once all scanlines have been drawn, render to the screen and set the V-Blank interrupt.
@@ -278,9 +315,10 @@ int main(int argc, char* args[])
 			myGB.modifyBit(myGB.memory[IF], 1, 0);	// VBLANK interrupt.
 
 			//// Set mode flag in STAT for VBLANK.
-			//myGB.modifyBit(myGB.memory[0xFF41], 1, 0);
-			//myGB.modifyBit(myGB.memory[0xFF41], 0, 1);
-			//myGB.modifyBit(myGB.memory[IF], 1, 1);	// STAT interrupt.
+			myGB.modifyBit(myGB.memory[0xFF41], 1, 0);
+			myGB.modifyBit(myGB.memory[0xFF41], 0, 1);
+			if ((myGB.memory[0xFF41] >> 4) & 0x1)
+				myGB.modifyBit(myGB.memory[IF], 1, 1);	// STAT interrupt.
 
 		}
 			
@@ -289,10 +327,11 @@ int main(int argc, char* args[])
 		{
 			myGB.memory[LY] = 0x00;					// Reset LY.
 
-			//// Set mode flag in STAT for HBLANK.
-			//myGB.modifyBit(myGB.memory[0xFF41], 0, 0);
-			//myGB.modifyBit(myGB.memory[0xFF41], 0, 1);
-			//myGB.modifyBit(myGB.memory[IF], 1, 1);	// STAT interrupt.
+			// Set mode flag in STAT for HBLANK.
+			myGB.modifyBit(myGB.memory[0xFF41], 0, 0);
+			myGB.modifyBit(myGB.memory[0xFF41], 0, 1);
+			if ((myGB.memory[0xFF41] >> 3) & 0x1)
+				myGB.modifyBit(myGB.memory[IF], 1, 1);	// STAT interrupt.
 		}
 	}
 }

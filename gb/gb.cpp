@@ -95,17 +95,6 @@ void gb::loadGame()
 // Emulate a cycle of the Game Boy.
 void gb::emulateCycle()
 {
-	//// DMA
-	/*for (int i = 0; i < 160; i++)
-		memory[0xFE00 | i] = memory[(memory[0xFF46] * 100) | i];*/
-	
-
-
-	if (memory[0x2000] != 0x20)
-		memory[0x2000] = 0x20;
-
-
-
 	// If scheduled to set the IME, check if it should occur on this cycle. If it should, set it, otherwise do it next cycle.
 	if (scheduleIME)
 	{
@@ -130,8 +119,8 @@ void gb::emulateCycle()
 
 					modifyBit(memory[IF], 0, i);
 					DI();
-					memory[SP - 1] = PC >> 8;
-					memory[SP - 2] = PC & 0xFF;
+					writeToMemory(SP - 1, PC >> 8);
+					writeToMemory(SP - 2, PC & 0xFF);
 					SP -= 2;
 					PC = intVectors[i];
 					if (logging)
@@ -1553,7 +1542,8 @@ void gb::emulateCycle()
 				break;
 
 			case 0x02: // LD (BC), A
-				memory[(B << 8) | C] = A;
+				writeToMemory((B << 8) | C, A);
+				//memory[(B << 8) | C] = A;
 				PC += 1;
 				break;
 
@@ -1586,8 +1576,8 @@ void gb::emulateCycle()
 				break;
 
 			case 0x08: // LD (a16), SP
-				memory[(memory[PC + 2] << 8) | memory[PC + 1]] = SP & 0xFF;
-				memory[((memory[PC + 2] << 8) | memory[PC + 1]) + 1] = SP >> 8;
+				writeToMemory((memory[PC + 2] << 8) | memory[PC + 1], SP & 0xFF);
+				writeToMemory(((memory[PC + 2] << 8) | memory[PC + 1]) + 1, SP >> 8);
 				PC += 3;
 				break;
 
@@ -1638,6 +1628,7 @@ void gb::emulateCycle()
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // STOP
+				printf("??");
 				PC += 1;
 				break;
 
@@ -1648,7 +1639,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x02: // LD (DE), A
-				memory[(D << 8) | E] = A;
+				writeToMemory((D << 8) | E, A);
 				PC += 1;
 				break;
 
@@ -1755,7 +1746,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x02: // LD (HL+), A
-				memory[(H << 8) | L] = A;
+				writeToMemory((H << 8) | L, A);
 				HL = combineReg(H, L);
 				INC(HL);
 				splitReg(H, L, HL);
@@ -1896,7 +1887,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x02: // LD (HL-), A
-				memory[(H << 8) | L] = A;
+				writeToMemory((H << 8) | L, A);
 				HL = combineReg(H, L);
 				DEC(HL);
 				splitReg(H, L, HL);
@@ -1919,7 +1910,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x06: // LD (HL), d8
-				memory[(H << 8) | L] = memory[PC + 1];
+				writeToMemory((H << 8) | L, memory[PC + 1]);
 				PC += 2;
 				break;
 
@@ -2249,32 +2240,32 @@ void gb::emulateCycle()
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // LD (HL), B
-				memory[(H << 8) | L] = B;
+				writeToMemory((H << 8) | L, B);
 				PC += 1;
 				break;
 
 			case 0x01: // LD (HL), C
-				memory[(H << 8) | L] = C;
+				writeToMemory((H << 8) | L, C);
 				PC += 1;
 				break;
 
 			case 0x02: // LD (HL), D
-				memory[(H << 8) | L] = D;
+				writeToMemory((H << 8) | L, D);
 				PC += 1;
 				break;
 
 			case 0x03: // LD (HL), E
-				memory[(H << 8) | L] = E;
+				writeToMemory((H << 8) | L, E);
 				PC += 1;
 				break;
 
 			case 0x04: // LD (HL), H
-				memory[(H << 8) | L] = H;
+				writeToMemory((H << 8) | L, H);
 				PC += 1;
 				break;
 
 			case 0x05: // LD (HL), L
-				memory[(H << 8) | L] = L;
+				writeToMemory((H << 8) | L, L);
 				PC += 1;
 				break;
 
@@ -2283,7 +2274,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x07: // LD (HL), A
-				memory[(H << 8) | L] = A;
+				writeToMemory((H << 8) | L, A);
 				PC += 1;
 				break;
 
@@ -2716,8 +2707,8 @@ void gb::emulateCycle()
 				break;
 
 			case 0x05: // PUSH BC
-				memory[SP - 1] = B;
-				memory[SP - 2] = C;
+				writeToMemory(SP - 1, B);
+				writeToMemory(SP - 2, C);
 				SP -= 2;
 				PC += 1;
 				break;
@@ -2827,8 +2818,8 @@ void gb::emulateCycle()
 				break;
 
 			case 0x05: // PUSH DE
-				memory[SP - 1] = D;
-				memory[SP - 2] = E;
+				writeToMemory(SP - 1, D);
+				writeToMemory(SP - 2, E);
 				SP -= 2;
 				PC += 1;
 				break;
@@ -2903,7 +2894,7 @@ void gb::emulateCycle()
 			switch (opcode & 0x0F)
 			{
 			case 0x00: // LDH (a8), A
-				memory[0xFF00 + memory[PC + 1]] = A;
+				writeToMemory(0xFF00 + memory[PC + 1], A);
 				PC += 2;
 				break;
 
@@ -2915,7 +2906,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x02: // LDH (C), A
-				memory[0xFF00+C] = A;
+				writeToMemory(0xFF00 + C, A);
 				PC += 1;
 				break;
 
@@ -2930,8 +2921,8 @@ void gb::emulateCycle()
 				break;
 
 			case 0x05: // PUSH HL
-				memory[SP - 1] = H;
-				memory[SP - 2] = L;
+				writeToMemory(SP - 1, H);
+				writeToMemory(SP - 2, L);
 				SP -= 2;
 				PC += 1;
 				break;
@@ -2955,7 +2946,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x0A: // LD (a16), A
-				memory[(memory[PC + 2] << 8)| memory[PC + 1]] = A;
+				writeToMemory((memory[PC + 2] << 8) | memory[PC + 1], A);
 				PC += 3;
 				break;
 
@@ -3020,8 +3011,8 @@ void gb::emulateCycle()
 				break;
 
 			case 0x05: // PUSH AF
-				memory[SP - 1] = A;
-				memory[SP - 2] = F;
+				writeToMemory(SP - 1, A);
+				writeToMemory(SP - 2, F);
 				SP -= 2;
 				PC += 1;
 				break;
@@ -3422,8 +3413,8 @@ void gb::SWAP(unsigned char& val)
 void gb::CALL()
 {
 	// Push the next instruction onto the stack.
-	memory[SP - 1] = (PC + 3) >> 8;
-	memory[SP - 2] = (PC + 3) & 0xFF;
+	writeToMemory(SP - 1, (PC + 3) >> 8);
+	writeToMemory(SP - 2, (PC + 3) & 0xFF);
 	SP -= 2;
 
 	// Jump to the address.
@@ -3434,8 +3425,8 @@ void gb::CALL()
 void gb::RST(unsigned char vec)
 {
 	PC += 1;
-	memory[SP - 1] = PC >> 8;
-	memory[SP - 2] = PC & 0xFF;
+	writeToMemory(SP - 1, PC >> 8);
+	writeToMemory(SP - 2, PC & 0xFF);
 	SP -= 2;
 	PC = vec;
 }
@@ -3454,4 +3445,39 @@ void gb::DI()
 	IME = 0;
 	scheduleIME = false;
 	cyclesBeforeEnableIME = 1;
+}
+
+void gb::writeToMemory(unsigned int addr, unsigned char data)
+{
+	if (addr < 0x8000) // ROM bank
+	{
+		printf("Game tried to write to ROM! addr = %X, data = %X\n", addr, data);
+		return;
+	}
+ 	else if (0xDDFF >= addr >= 0xC000)	// Work RAM (mirrored to echo RAM)
+	{
+		memory[addr] = data;
+		memory[addr + 0x2000] = data;
+	}
+	else if (0xFDFF >= addr >= 0xE000)	// Echo RAM
+	{
+		memory[addr] = data;
+		memory[addr - 0x2000] = data;
+	}
+	else if (0xFEFF >= addr >= 0xFEA0)	// Unused range
+	{
+		printf("Game tried to write to unusable range! addr = %X, data = %X\n", addr, data);
+	}
+	else if (addr == 0xFF04)			// DIV register
+	{
+		memory[addr] = 0x0;
+	}
+	else if (addr == 0xFF46)			// DMA transfer
+	{
+		memory[0xFF46] = data;
+		for (int i = 0; i < 0xA0; i++)
+			memory[0xFE00 | i] = memory[(memory[0xFF46] * 0x100) | i];
+	}
+	else								// Unconditional transfer
+		memory[addr] = data;
 }

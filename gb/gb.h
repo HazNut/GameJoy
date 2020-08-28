@@ -61,7 +61,7 @@ private:
 	void RST(unsigned char vec);											// Calls a given memory address.
 	void EI();																// Enable interrupts.
 	void DI();																// Disable interrupts.
-
+	void writeToMemory(unsigned int addr, unsigned char data);
 public:
 	unsigned char memory[65536];											// 2^16 bytes can be addressed.
 	void initialize();														// Initialize the Game Boy's state.
