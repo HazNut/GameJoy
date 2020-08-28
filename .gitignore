@@ -343,8 +343,7 @@ healthchecksdb
 SDL/
 
 # ROMs
-gb/individual
-gb/source
+ROMs
 
 # Log file
 gb/output.txt

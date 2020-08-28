@@ -163,7 +163,7 @@ void drawBackground(unsigned int gfxArray[160 * 144])
 
 void drawWindow(unsigned int gfxArray[160 * 144])
 {
-	unsigned char winX, winY;						// Where the background is in relation to the rendering window.
+	unsigned char winX, winY;							// Where the background is in relation to the rendering window.
 	unsigned char currTile;								// The current tile to have a line rendered.
 	unsigned int mapBaseVal, mapOffset, tileStartByte;	// Pointers to memory locations related to tiles.
 

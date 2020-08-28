@@ -75,7 +75,7 @@ void gb::loadGame()
 	std::streampos size;
 	char* memblock;
 
-	std::ifstream file("tetris.gb", std::ios::in | std::ios::binary | std::ios::ate);
+	std::ifstream file("ROMs/user/tetris.gb", std::ios::in | std::ios::binary | std::ios::ate);
 	if (file.is_open())
 	{
 		size = file.tellg();
@@ -3451,7 +3451,6 @@ void gb::writeToMemory(unsigned int addr, unsigned char data)
 {
 	if (addr < 0x8000) // ROM bank
 	{
-		printf("Game tried to write to ROM! addr = %X, data = %X\n", addr, data);
 		return;
 	}
  	else if (0xDDFF >= addr >= 0xC000)	// Work RAM (mirrored to echo RAM)
