@@ -7,3 +7,5 @@ I have implemented the majority of opcodes on the CPU, and am currently working 
 Note: The project makes use of SDL2. The SDL folder needs to be included in the main directory. 
 
 The project can be compiled and run with Visual Studio 2019.
+
+![image](https://imgur.com/B5DHOsm.png)
