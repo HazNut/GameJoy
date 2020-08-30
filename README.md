@@ -4,6 +4,6 @@ The emulator is being tested using test ROMs created by Blargg. They can be down
 
 I have implemented the majority of opcodes on the CPU, and am currently working on the graphics and other features.
 
-Note: The project makes use of SDL2. The files need to be included under gb/SDL.
+Note: The project makes use of SDL2. The SDL folder needs to be included in the main directory. 
 
-Controls: DPAD is WASD, B/A is O/P, Select/Start is K/L.
+The project can be compiled and run with Visual Studio 2019.
