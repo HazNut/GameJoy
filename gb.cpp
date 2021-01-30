@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 
+
 // Initialize the Game Boy by setting the register values.
 void gb::initialize()
 {
@@ -70,12 +71,11 @@ void gb::initialize()
 }
 
 // Load a ROM.
-void gb::loadGame()
+void gb::loadGame(char filename[])
 {
 	std::streampos size;
 	char* memblock;
-
-	std::ifstream file("ROMs/user/tetris.gb", std::ios::in | std::ios::binary | std::ios::ate);
+	std::ifstream file(filename, std::ios::in | std::ios::binary | std::ios::ate);
 	if (file.is_open())
 	{
 		size = file.tellg();

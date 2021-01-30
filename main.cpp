@@ -1,6 +1,9 @@
 #include "gb.h"
 #include "SDL.h"
 #include <algorithm>
+#include <windows.h>
+#include <shobjidl.h>
+
 
 gb myGB; // The Game Boy's CPU is stored as an object.
 
@@ -233,6 +236,42 @@ void drawSprites(unsigned int gfxArray[160 * 144])
 
 int main(int argc, char* args[])
 {
+	char filename[100];
+	// Open file dialog to select ROM. Adapted from docs.microsoft.com. Might use a GUI library as this is a little complicated.
+	HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE); 
+
+	// pszFilePath stores the file path to the opened file. Has to be initialized in a weird way.
+	wchar_t wcharTemp[] = L"";
+	PWSTR pszFilePath = wcharTemp;
+
+	if (SUCCEEDED(hr))
+	{
+		// Create interface for a Common Item Dialog object, then create the object itself.
+		IFileOpenDialog* pFileOpen;
+		hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, IID_IFileOpenDialog, reinterpret_cast<void**>(&pFileOpen));
+
+		if (SUCCEEDED(hr))
+		{
+			hr = pFileOpen->Show(NULL); // Show the Open dialog box.
+			if (SUCCEEDED(hr))
+			{
+				// Get the file the user selected.
+				IShellItem* pItem;
+				hr = pFileOpen->GetResult(&pItem);
+
+				if (SUCCEEDED(hr))
+				{
+					// Get the file path then conver to a char array.
+					hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+					wcstombs(filename, pszFilePath, 100);
+					CoTaskMemFree(pszFilePath);
+					pItem->Release();
+				}
+				pFileOpen->Release();
+			}
+			CoUninitialize();
+		}
+	}
 
 	// Set up the graphics environment.
 	SDL_Init(SDL_INIT_VIDEO);
@@ -245,7 +284,9 @@ int main(int argc, char* args[])
 	
 	// Set up the Game Boy and load the game.
 	myGB.initialize();
-	myGB.loadGame();
+	myGB.loadGame(filename);
+
+
 
 	unsigned int* gfxArray = new unsigned int [160 * 144];	// Stores the RGB value of each pixel.
 	int x = 0;												// The x coordinate on the current scanline to be rendered.
