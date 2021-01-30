@@ -234,21 +234,20 @@ void drawSprites(unsigned int gfxArray[160 * 144])
 	}
 }
 
-int main(int argc, char* args[])
+// Open file dialog to select ROM, then store the ROM's path.
+void setPathUsingFileDialog(char* filepath)
 {
-	char filename[100]; // Arbitrary size for now.
 
-	// Open file dialog to select ROM. Adapted from docs.microsoft.com.
-
-	HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE); 
+	// Stores the result of certain operations.
+	HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
 	// pszFilePath stores the file path to the opened file. Has to be initialized in a weird way.
 	wchar_t wcharTemp[] = L"";
 	PWSTR pszFilePath = wcharTemp;
 
-	if (SUCCEEDED(hr)) // Check success for certain operations.
+	if (SUCCEEDED(hr))
 	{
-		// Create interface for a Common Item Dialog object, then create the object itself.
+		// Create interface for a Common Item Dialog object, then create the object itself, passing the interface.
 		IFileOpenDialog* pFileOpen;
 		hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, IID_IFileOpenDialog, reinterpret_cast<void**>(&pFileOpen));
 
@@ -272,9 +271,10 @@ int main(int argc, char* args[])
 
 					if (SUCCEEDED(hr))
 					{
-						// Get the file path then conver to a char array.
+						// Get the file path, then convert it to the right format and store it.
 						hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
-						wcstombs(filename, pszFilePath, 100);
+						if (pszFilePath)
+							wcstombs(filepath, pszFilePath, 100);
 
 						CoTaskMemFree(pszFilePath);
 						pItem->Release();
@@ -285,7 +285,10 @@ int main(int argc, char* args[])
 			}
 		}
 	}
+}
 
+int main(int argc, char* args[])
+{
 	// Set up the graphics environment.
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_Window* win = SDL_CreateWindow("GameJoy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160 * 2, 144 * 2, SDL_WINDOW_SHOWN);
@@ -295,14 +298,15 @@ int main(int argc, char* args[])
 	
 	const Uint8* kb = SDL_GetKeyboardState(NULL); // Stores the state of currently pressed keys.
 	
-	// Set up the Game Boy and load the game.
-	myGB.initialize();
-	myGB.loadGame(filename);
+	myGB.initialize(); // Set up the Game Boy.
 
+	// Open the file dialog and let the user select the ROM they want to play, and store its path.
+	char filepath[100];
+	setPathUsingFileDialog(filepath);
 
+	myGB.loadGame(filepath); // Load the ROM at the given path.
 
 	unsigned int* gfxArray = new unsigned int [160 * 144];	// Stores the RGB value of each pixel.
-	int x = 0;												// The x coordinate on the current scanline to be rendered.
 	
 	int cyclesSinceLastUpdate = 0;							// Every 100 cycles of the CPU, update the keyboard state.
 	myGB.modifyBit(myGB.memory[LCDC], 1, 7);
