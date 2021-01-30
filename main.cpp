@@ -236,15 +236,17 @@ void drawSprites(unsigned int gfxArray[160 * 144])
 
 int main(int argc, char* args[])
 {
-	char filename[100];
-	// Open file dialog to select ROM. Adapted from docs.microsoft.com. Might use a GUI library as this is a little complicated.
+	char filename[100]; // Arbitrary size for now.
+
+	// Open file dialog to select ROM. Adapted from docs.microsoft.com.
+
 	HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE); 
 
 	// pszFilePath stores the file path to the opened file. Has to be initialized in a weird way.
 	wchar_t wcharTemp[] = L"";
 	PWSTR pszFilePath = wcharTemp;
 
-	if (SUCCEEDED(hr))
+	if (SUCCEEDED(hr)) // Check success for certain operations.
 	{
 		// Create interface for a Common Item Dialog object, then create the object itself.
 		IFileOpenDialog* pFileOpen;
@@ -252,24 +254,35 @@ int main(int argc, char* args[])
 
 		if (SUCCEEDED(hr))
 		{
-			hr = pFileOpen->Show(NULL); // Show the Open dialog box.
+			// Create and set the file dialog filter to only Game Boy ROMs.
+			COMDLG_FILTERSPEC rgSpec[] =
+			{
+				L"Game Boy ROM", L"*.gb"
+			};
+			hr = pFileOpen->SetFileTypes(1, rgSpec);
+
 			if (SUCCEEDED(hr))
 			{
-				// Get the file the user selected.
-				IShellItem* pItem;
-				hr = pFileOpen->GetResult(&pItem);
-
+				hr = pFileOpen->Show(NULL); // Show the Open dialog box.
 				if (SUCCEEDED(hr))
 				{
-					// Get the file path then conver to a char array.
-					hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
-					wcstombs(filename, pszFilePath, 100);
-					CoTaskMemFree(pszFilePath);
-					pItem->Release();
+					// Get the file the user selected.
+					IShellItem* pItem;
+					hr = pFileOpen->GetResult(&pItem);
+
+					if (SUCCEEDED(hr))
+					{
+						// Get the file path then conver to a char array.
+						hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+						wcstombs(filename, pszFilePath, 100);
+
+						CoTaskMemFree(pszFilePath);
+						pItem->Release();
+					}
+					pFileOpen->Release();
 				}
-				pFileOpen->Release();
+				CoUninitialize();
 			}
-			CoUninitialize();
 		}
 	}
 
