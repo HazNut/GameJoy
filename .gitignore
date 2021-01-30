@@ -339,13 +339,8 @@ ASALocalRun/
 # BeatPulse healthcheck temp database
 healthchecksdb
 
-# SDL
+## Custom preferences
+
 SDL/
-
-# ROMs
-ROMs
-
-# Log file
-gb/output.txt
-
-gb/*.gb
+ROMs/
+output.txt
