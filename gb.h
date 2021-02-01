@@ -65,7 +65,7 @@ private:
 public:
 	unsigned char memory[65536];											// 2^16 bytes can be addressed.
 	void initialize();														// Initialize the Game Boy's state.
-	void loadGame(char filename[]);										    // Load the game into memory.
+	void loadGame(char filename[], char* gameTitle);						// Load the game into memory, return its name.
 	void emulateCycle();													// Emulate an instruction.
 	void modifyBit(unsigned char &r, int val, int pos);						// Modify a bit in a byte.
 	bool logging = false;													// Set to log CPU state to output.txt.

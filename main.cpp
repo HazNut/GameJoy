@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <windows.h>
 #include <shobjidl.h>
+#include <string>
+#include <iostream>
 
 
 gb myGB; // The Game Boy's CPU is stored as an object.
@@ -304,7 +306,11 @@ int main(int argc, char* args[])
 	char filepath[100];
 	setPathUsingFileDialog(filepath);
 
-	myGB.loadGame(filepath); // Load the ROM at the given path.
+	// Load the game and update the window title.
+	char gameTitle[16];
+	myGB.loadGame(filepath, gameTitle);
+	std::string windowTitle = "GameJoy - " + std::string(gameTitle, 16);
+	SDL_SetWindowTitle(win, windowTitle.c_str());
 
 	unsigned int* gfxArray = new unsigned int [160 * 144];	// Stores the RGB value of each pixel.
 	

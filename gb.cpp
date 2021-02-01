@@ -70,8 +70,8 @@ void gb::initialize()
 
 }
 
-// Load a ROM.
-void gb::loadGame(char filename[])
+// Load a ROM, returning the game's name.
+void gb::loadGame(char filename[], char* gameTitle)
 {
 	std::streampos size;
 	char* memblock;
@@ -90,6 +90,13 @@ void gb::loadGame(char filename[])
 	}
 	else printf("Unable to load ROM.\n");
 
+	// Get the game's name from the cartridge header.
+	int offset = 0;
+	for (unsigned int i = 0x134; i < 0x144; i++)
+	{
+		*(gameTitle + offset) = memory[i];
+		offset += 1;
+	}
 }
 
 // Emulate a cycle of the Game Boy.
