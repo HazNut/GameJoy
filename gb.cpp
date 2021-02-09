@@ -34,6 +34,9 @@ void gb::initialize()
 	Cb = 1;
 
 	// Set values for I/O registers.
+	counter = 0xABBC;
+	memory[0xFF04] = counter >> 8;
+
 	memory[0xFF05] = 0x00;
 	memory[0xFF06] = 0x00;
 	memory[0xFF07] = 0x00;
@@ -2278,6 +2281,8 @@ void gb::emulateCycle()
 
 			case 0x06: // HALT
 				PC += 1;
+				std::cout << "HALTED\n";
+				modifyBit(memory[TAC], 0, 2);
 				break;
 
 			case 0x07: // LD (HL), A
@@ -3088,7 +3093,49 @@ void gb::emulateCycle()
 
 	
 	updateFlagReg(); // Update F with the new flag values.
+
+	// Timer
+
+	memory[DIV] = counter >> 8; // DIV is upper 8 bits of internal counter.
+
+	if (((memory[TAC] >> 2) & 0b1) == 0b1) // If timer enabled.
+	{
+		if ((memory[TAC] & 0b11) == 0b00)
+		{
+			if (counter % 256 == 0)
+				incTimer();
+		}
+		else if ((memory[TAC] & 0b11) == 0b01)
+		{
+			if (counter % 4 == 0)
+				incTimer();
+		}
+		else if ((memory[TAC] & 0b11) == 0b10)
+		{
+			if (counter % 16 == 0)
+				incTimer();
+		}
+		else if ((memory[TAC] & 0b11) == 0b11)
+		{
+			if (counter % 64 == 0)
+				incTimer();
+		}
+	}
+	//std::cout << "Counter: " << counter << ", DIV: " << (int)memory[DIV] << "TIMA: " << (int)memory[TIMA] << "\n";
+	counter += 1;
 }
+
+
+void gb::incTimer()
+{
+	memory[TIMA] += 1;
+	if (memory[TIMA] == 0x0)  // Overflowed.
+	{
+		memory[TIMA] = memory[TMA];
+		modifyBit(memory[IF], 1, 2); // Timer interrupt.
+	}
+}
+
 
 // Updates F with the new flag values.
 void gb::updateFlagReg()
@@ -3477,6 +3524,12 @@ void gb::writeToMemory(unsigned int addr, unsigned char data)
 	else if (addr == 0xFF04)			// DIV register
 	{
 		memory[addr] = 0x0;
+	}
+	else if (addr == 0xFF05)			// TAC register
+	{
+		modifyBit(memory[TAC], data & 0x1, 0);
+		modifyBit(memory[TAC], (data >> 1) & 0x1, 1);
+		modifyBit(memory[TAC], (data >> 2) & 0x1, 2);
 	}
 	else if (addr == 0xFF46)			// DMA transfer
 	{

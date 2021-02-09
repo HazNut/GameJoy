@@ -5,6 +5,10 @@
 
 // Using names for named registers in memory.
 constexpr unsigned int JOYP = 0xFF00;
+constexpr unsigned int DIV = 0xFF04;
+constexpr unsigned int TIMA = 0xFF05;
+constexpr unsigned int TMA = 0xFF06;
+constexpr unsigned int TAC = 0xFF07;
 constexpr unsigned int IF = 0xFF0F;
 constexpr unsigned int LCDC = 0xFF40;
 constexpr unsigned int SCROLLY = 0xFF42;
@@ -30,9 +34,11 @@ private:
 	bool scheduleIME;														// If IME is scheduled to be set or not.
 	int cyclesBeforeEnableIME = 1;											// Cycles before IME update.
 	unsigned char intVectors[5] = { 0x40, 0x48, 0x50, 0x58, 0x60 };			// Jump vectors for interrupts.
+	unsigned int counter = 0;
 	
 
 	// General functions.
+	void incTimer();
 	void updateFlagReg();													// Alter the flags in the flag register.
 	int checkHalfCarry(unsigned char val1, unsigned char val2, char mode);	// Check half-carry for adding/subtracting 2 bytes.
 	int checkHalfCarry(unsigned int val1, unsigned int val2, char mode);	// Check half-carry for adding/subtracting 2 16-bit values.
