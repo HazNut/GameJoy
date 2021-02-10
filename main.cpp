@@ -10,52 +10,52 @@
 gb myGB; // The Game Boy's CPU is stored as an object.
 
 // Checks to see if the Game Boy is requesting the input state, then returns the currently pressed keys.
-void processInputs(const Uint8* kb)
+void processInputs(const Uint8 kb[])
 {
 
 	// GB wants to check buttons.
-	if ((myGB.memory[JOYP] >> 5) == 0)
+	if (((myGB.memory[JOYP] >> 5) & 0x1) == 0)
 	{
-		if (kb[SDL_SCANCODE_P])
+		if (kb[SDL_SCANCODE_P])  // A
 			myGB.modifyBit(myGB.memory[JOYP], 0, 0); // If pressing A, set the input state in memory.
 		else
 			myGB.modifyBit(myGB.memory[JOYP], 1, 0); // Else reset the input state (1 = off).
 
-		if (kb[SDL_SCANCODE_O])
+		if (kb[SDL_SCANCODE_O])  // B
 			myGB.modifyBit(myGB.memory[JOYP], 0, 1);
 		else
 			myGB.modifyBit(myGB.memory[JOYP], 1, 1);
 
-		if (kb[SDL_SCANCODE_K])
+		if (kb[SDL_SCANCODE_L])  // SELECT
 			myGB.modifyBit(myGB.memory[JOYP], 0, 2);
 		else
 			myGB.modifyBit(myGB.memory[JOYP], 1, 2);
 
-		if (kb[SDL_SCANCODE_L])
+		if (kb[SDL_SCANCODE_K])  // START
 			myGB.modifyBit(myGB.memory[JOYP], 0, 3);
 		else
 			myGB.modifyBit(myGB.memory[JOYP], 1, 3);
 	}
 
 	// GB wants to check D-pad.
-	else if ((myGB.memory[JOYP] >> 4) == 0)
+	else if (((myGB.memory[JOYP] >> 4) & 0x1) == 0)
 	{
-		if (kb[SDL_SCANCODE_D])
+		if (kb[SDL_SCANCODE_D])  // RIGHT
 			myGB.modifyBit(myGB.memory[JOYP], 0, 0);
 		else
 			myGB.modifyBit(myGB.memory[JOYP], 1, 0);
 
-		if (kb[SDL_SCANCODE_A])
+		if (kb[SDL_SCANCODE_A])  // LEFT
 			myGB.modifyBit(myGB.memory[JOYP], 0, 1);
 		else
 			myGB.modifyBit(myGB.memory[JOYP], 1, 1);
 
-		if (kb[SDL_SCANCODE_W])
+		if (kb[SDL_SCANCODE_W])  // UP
 			myGB.modifyBit(myGB.memory[JOYP], 0, 2);
 		else
 			myGB.modifyBit(myGB.memory[JOYP], 1, 2);
 
-		if (kb[SDL_SCANCODE_S])
+		if (kb[SDL_SCANCODE_S])  // DOWN
 			myGB.modifyBit(myGB.memory[JOYP], 0, 3);
 		else
 			myGB.modifyBit(myGB.memory[JOYP], 1, 3);

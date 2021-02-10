@@ -3521,6 +3521,11 @@ void gb::writeToMemory(unsigned int addr, unsigned char data)
 	{
 		printf("Game tried to write to unusable range! addr = %X, data = %X\n", addr, data);
 	}
+	else if (addr == 0xFF00)  // JOYP
+	{
+		modifyBit(memory[addr], (data >> 4) & 0x1, 4);
+		modifyBit(memory[addr], (data >> 5) & 0x1, 5);
+	}
 	else if (addr == 0xFF04)			// DIV register
 	{
 		memory[addr] = 0x0;
