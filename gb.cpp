@@ -82,6 +82,7 @@ void gb::loadGame(char filename[], char* gameTitle)
 	if (file.is_open())
 	{
 		size = file.tellg();
+		std::cout << size << "\n";
 		memblock = new char[unsigned int (size) + 1]; // Add 1 to hold escape code.
 		file.seekg(0, std::ios::beg);
 		file.read(memblock, size);

@@ -10,28 +10,27 @@
 gb myGB; // The Game Boy's CPU is stored as an object.
 
 // Checks to see if the Game Boy is requesting the input state, then returns the currently pressed keys.
-void processInputs(const Uint8 kb[])
+void processInputs(const Uint8 kb[], SDL_GameController *controller)
 {
-
 	// GB wants to check buttons.
 	if (((myGB.memory[JOYP] >> 5) & 0x1) == 0)
 	{
-		if (kb[SDL_SCANCODE_P])  // A
+		if (kb[SDL_SCANCODE_P] || SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_B))  // A
 			myGB.modifyBit(myGB.memory[JOYP], 0, 0); // If pressing A, set the input state in memory.
 		else
 			myGB.modifyBit(myGB.memory[JOYP], 1, 0); // Else reset the input state (1 = off).
 
-		if (kb[SDL_SCANCODE_O])  // B
+		if (kb[SDL_SCANCODE_O] || SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_A))  // B
 			myGB.modifyBit(myGB.memory[JOYP], 0, 1);
 		else
 			myGB.modifyBit(myGB.memory[JOYP], 1, 1);
 
-		if (kb[SDL_SCANCODE_L])  // SELECT
+		if (kb[SDL_SCANCODE_L] || SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_BACK))  // SELECT
 			myGB.modifyBit(myGB.memory[JOYP], 0, 2);
 		else
 			myGB.modifyBit(myGB.memory[JOYP], 1, 2);
 
-		if (kb[SDL_SCANCODE_K])  // START
+		if (kb[SDL_SCANCODE_K] || SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_START))  // START
 			myGB.modifyBit(myGB.memory[JOYP], 0, 3);
 		else
 			myGB.modifyBit(myGB.memory[JOYP], 1, 3);
@@ -40,22 +39,22 @@ void processInputs(const Uint8 kb[])
 	// GB wants to check D-pad.
 	else if (((myGB.memory[JOYP] >> 4) & 0x1) == 0)
 	{
-		if (kb[SDL_SCANCODE_D])  // RIGHT
+		if (kb[SDL_SCANCODE_D] || SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_RIGHT))  // RIGHT
 			myGB.modifyBit(myGB.memory[JOYP], 0, 0);
 		else
 			myGB.modifyBit(myGB.memory[JOYP], 1, 0);
 
-		if (kb[SDL_SCANCODE_A])  // LEFT
+		if (kb[SDL_SCANCODE_A] || SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_LEFT))  // LEFT
 			myGB.modifyBit(myGB.memory[JOYP], 0, 1);
 		else
 			myGB.modifyBit(myGB.memory[JOYP], 1, 1);
 
-		if (kb[SDL_SCANCODE_W])  // UP
+		if (kb[SDL_SCANCODE_W] || SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_UP))  // UP
 			myGB.modifyBit(myGB.memory[JOYP], 0, 2);
 		else
 			myGB.modifyBit(myGB.memory[JOYP], 1, 2);
 
-		if (kb[SDL_SCANCODE_S])  // DOWN
+		if (kb[SDL_SCANCODE_S] || SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_DPAD_DOWN))  // DOWN
 			myGB.modifyBit(myGB.memory[JOYP], 0, 3);
 		else
 			myGB.modifyBit(myGB.memory[JOYP], 1, 3);
@@ -292,13 +291,25 @@ void setPathUsingFileDialog(char* filepath)
 int main(int argc, char* args[])
 {
 	// Set up the graphics environment.
-	SDL_Init(SDL_INIT_VIDEO);
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
 	SDL_Window* win = SDL_CreateWindow("GameJoy", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 160 * 2, 144 * 2, SDL_WINDOW_SHOWN);
 	SDL_Renderer* renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 	SDL_RenderSetScale(renderer, 2, 2);
 	SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, SDL_CreateRGBSurface(0, 160, 144, 24, 0, 0, 0, 0));
 	
 	const Uint8* kb = SDL_GetKeyboardState(NULL); // Stores the state of currently pressed keys.
+
+	// Set up controller (must be connected before running).
+	SDL_GameController* controller = nullptr;
+	for (int i = 0; i < SDL_NumJoysticks(); i++)
+	{
+		if (SDL_IsGameController(i))
+		{
+			std::cout << "CONTROLLER CONNECTED\n";
+			controller = SDL_GameControllerOpen(i);
+			break;
+		}
+	}
 	
 	myGB.initialize(); // Set up the Game Boy.
 
@@ -329,12 +340,13 @@ int main(int argc, char* args[])
 			if (cyclesSinceLastUpdate == 100)
 			{
 				SDL_PumpEvents();	// This updates the keyboard state.
+				SDL_GameControllerUpdate();
 				cyclesSinceLastUpdate = 0;
 				if (kb[SDL_SCANCODE_SPACE])
 					myGB.logging = !myGB.logging;
 			}
 			
-			processInputs(kb);		// Processes keyboard inputs if the input state is requested by the Game Boy.
+			processInputs(kb, controller);		// Processes keyboard inputs if the input state is requested by the Game Boy.
 			
 		}
 		
