@@ -91,7 +91,7 @@ void gb::loadGame(char filename[], char* gameTitle)
 
 	// Set the game's name using information from the cartridge header.
 	int offset = 0;
-	for (unsigned int i = 0x134; i < 0x144; i++)
+	for (uint16_t i = 0x134; i < 0x144; i++)
 	{
 		*(gameTitle + offset) = memory[i];
 		offset += 1;
@@ -115,7 +115,6 @@ void gb::emulateCycle()
 	// Handle interrupts
 	if (IME)
 	{
-	
 		for (int i = 0; i < 5; i++)
 		{
 			if (((memory[IF] >> i) & 0x1) == 1)
@@ -1679,7 +1678,7 @@ void gb::emulateCycle()
 
 			case 0x08: // JR r8
 			{
-				signed char offset;
+				int8_t offset;
 				PC += 1;
 				offset = memory[PC];
 				PC += offset;
@@ -1735,7 +1734,7 @@ void gb::emulateCycle()
 			case 0x00: // JR NZ, r8
 				if (Zb == 0)
 				{
-					signed char offset;
+					int8_t offset;
 					PC += 1;
 					offset = memory[PC];
 					PC += offset;
@@ -1815,7 +1814,7 @@ void gb::emulateCycle()
 			case 0x08: // JR Z, r8
 				if (Zb == 1)
 				{
-					signed char offset;
+					int8_t offset;
 					PC += 1;
 					offset = memory[PC];
 					PC += offset;
@@ -1877,7 +1876,7 @@ void gb::emulateCycle()
 			case 0x00: // JR NC, r8
 				if (Cb == 0)
 				{
-					signed char offset;
+					int8_t offset;
 					PC += 1;
 					offset = memory[PC];
 					PC += offset;
@@ -1930,7 +1929,7 @@ void gb::emulateCycle()
 			case 0x08: // JR C, r8
 				if (Cb == 1)
 				{
-					signed char offset;
+					int8_t offset;
 					PC += 1;
 					offset = memory[PC];
 					PC += offset;
@@ -2945,7 +2944,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x08: // ADD SP, r8
-				ADD(SP, signed char(memory[PC + 1]));
+				ADD(SP, (int8_t) memory[PC + 1]);
 				PC += 2;
 				break;
 
@@ -3036,9 +3035,9 @@ void gb::emulateCycle()
 
 			case 0x08: // LD HL, SP + r8
 			{
-				signed int val = memory[PC + 1];
-				unsigned int tempSP = SP;
-				ADD(tempSP, signed char(val));
+				int16_t val = memory[PC + 1];
+				uint16_t tempSP = SP;
+				ADD(tempSP, (int8_t) val);
 				H = (tempSP >> 8) & 0xFF;
 				L = tempSP & 0xFF;
 				PC += 2;
@@ -3052,7 +3051,7 @@ void gb::emulateCycle()
 
 			case 0x0A: // LD A, (a16)
 			{
-				unsigned int addr = memory[PC + 2] << 8 | memory[PC + 1];
+				uint16_t addr = memory[PC + 2] << 8 | memory[PC + 1];
 				A = memory[addr];
 				PC += 3;
 				break;
@@ -3143,7 +3142,7 @@ void gb::updateFlagReg()
 }
 
 // Set or reset a bit in a byte, at a given position.
-void gb::modifyBit(unsigned char &val, int bitVal, int pos)
+void gb::modifyBit(uint8_t &val, int bitVal, int pos)
 {
 	// Bit masks are used to modify the value of the bit.
 	if (bitVal == 0)
@@ -3157,7 +3156,7 @@ void gb::modifyBit(unsigned char &val, int bitVal, int pos)
 }
 
 // Check if the half-carry bit should be set for an addition/subtraction of two bytes.
-bool gb::checkHalfCarry(unsigned char a, unsigned char b, char mode)
+bool gb::checkHalfCarry(uint8_t a, uint8_t b, char mode)
 {
 	if (mode == '+')
 		if (((a & 0xF) + (b & 0xF)) > 0xF)
@@ -3175,7 +3174,7 @@ bool gb::checkHalfCarry(unsigned char a, unsigned char b, char mode)
 }
 
 // Check if the half-carry bit should be set for an addition/subtraction of two 16-bit values.
-bool gb::checkHalfCarry(unsigned int val1, unsigned int val2, char mode)
+bool gb::checkHalfCarry(uint16_t val1, uint16_t val2, char mode)
 {
 	if (mode == '+')
 		if (((val1 & 0xFFF) + (val2 & 0xFFF)) > 0xFFF)
@@ -3193,7 +3192,7 @@ bool gb::checkHalfCarry(unsigned int val1, unsigned int val2, char mode)
 }
 
 // Check if the zero flag should be set based on a input value.
-bool gb::checkZero(unsigned char val)
+bool gb::checkZero(uint8_t val)
 {
 	if (val == 0)
 		return 1;
@@ -3202,7 +3201,7 @@ bool gb::checkZero(unsigned char val)
 }
 
 // Returns the 16-bit value when combining two 8-bit register values together.
-unsigned int gb::combineReg(unsigned char reg1, unsigned char reg2)
+uint16_t gb::combineReg(uint8_t reg1, uint8_t reg2)
 {
 	return (reg1 << 8) | reg2;
 }
@@ -3210,7 +3209,7 @@ unsigned int gb::combineReg(unsigned char reg1, unsigned char reg2)
 // Used to control memory writes by instructions in the CPU's instruction set. Writes to memory
 // locations performed outside of actual CPU instructions can write directly to memory, e.g. 
 // updating the JOYP register when an input is detected.
-void gb::writeToMemory(unsigned int addr, unsigned char data)
+void gb::writeToMemory(uint16_t addr, uint8_t data)
 {
 	if (addr < 0x8000) // ROM bank
 	{
@@ -3256,14 +3255,14 @@ void gb::writeToMemory(unsigned int addr, unsigned char data)
 }
 
 // Puts the value in a 16-bit register back into the two original registers.
-void gb::splitReg(unsigned char& reg1, unsigned char& reg2, unsigned int reg3)
+void gb::splitReg(uint8_t &reg1, uint8_t &reg2, uint16_t reg3)
 {
 	reg1 = reg3 >> 8 & 0xFF;
 	reg2 = reg3 & 0xFF;
 }
 
 // Increment a byte.
-void gb::INC(unsigned char &val)
+void gb::INC(uint8_t &val)
 {
 	Hb = checkHalfCarry(val, 0x1, '+');
 	val += 1;
@@ -3272,13 +3271,13 @@ void gb::INC(unsigned char &val)
 }
 
 // Increment a 16-bit value.
-void gb::INC(unsigned int &val)
+void gb::INC(uint16_t &val)
 {
 	val += 1;
 }
 
 // Decrement a byte.
-void gb::DEC(unsigned char &val)
+void gb::DEC(uint8_t &val)
 {
 	Hb = checkHalfCarry(val, 0x1, '-');
 	val -= 1;
@@ -3287,20 +3286,20 @@ void gb::DEC(unsigned char &val)
 }
 
 // Decrement a 16-bit value.
-void gb::DEC(unsigned int &val)
+void gb::DEC(uint16_t &val)
 {
 	val -= 1;
 }
 
 // Adds a byte value to another byte, with or without adding the carry bit.
-void gb::ADD(unsigned char &val1, unsigned char val2, bool carry)
+void gb::ADD(uint8_t &val1, uint8_t val2, bool carry)
 {
 	// Adding the carry bit along with the given value.
 	if (carry)
 	{
 		/*The value of the carry bit is calculated before adding. However, we need to add the carry bit after, so we
 		store the new value here and update the carry bit after adding.*/
-		unsigned char newCb = (val1 > (0xFF - val2 - Cb));
+		uint8_t newCb = (val1 > (0xFF - val2 - Cb));
 	
 		Hb = (((val1 & 0xF) + (val2 & 0xF) + Cb) > 0xF);
 		val1 += val2 + Cb;
@@ -3319,7 +3318,7 @@ void gb::ADD(unsigned char &val1, unsigned char val2, bool carry)
 }
 
 // Adds a 16-bit value to another 16-bit value.
-void gb::ADD(unsigned int &val1, unsigned int val2)
+void gb::ADD(uint16_t &val1, uint16_t val2)
 {
 	if (val1 > (0xFFFF - val2))
 		Cb = 1;
@@ -3332,7 +3331,7 @@ void gb::ADD(unsigned int &val1, unsigned int val2)
 }
 
 // Adds a signed 8-bit value to an unsigned 16-bit value.
-void gb::ADD(unsigned int &val1, signed char val2)
+void gb::ADD(uint16_t &val1, int8_t val2)
 {
 	if ((val1 & 0xFF) > (0xFF - (val2 & 0xFF)))
 		Cb = 1;
@@ -3346,7 +3345,7 @@ void gb::ADD(unsigned int &val1, signed char val2)
 }
 
 // Subtract an 8-bit value from A, along with the carry bit if required.
-void gb::SUB(unsigned char val, bool carry)
+void gb::SUB(uint8_t val, bool carry)
 {
 	// Subtracting the given value and the carry bit.
 	if (carry)
@@ -3354,7 +3353,7 @@ void gb::SUB(unsigned char val, bool carry)
 		/*The value of the carry bit is calculated before subtracting. However, we need 
 		to subtract the carry bit after, so we store the new value here and update the carry 
 		bit after subtracting.*/
-		unsigned char newCb = (val + Cb > A);
+		uint8_t newCb = (val + Cb > A);
 
 		Hb = (((A & 0xF) < (val & 0xF) + Cb));
 		A = A - val - Cb;
@@ -3374,7 +3373,7 @@ void gb::SUB(unsigned char val, bool carry)
 }
 
 // ANDs A with a value.
-void gb::AND(unsigned char val)
+void gb::AND(uint8_t val)
 {
 	A &= val;
 	Zb = checkZero(A);
@@ -3384,7 +3383,7 @@ void gb::AND(unsigned char val)
 }
 
 // XORs A with a value.
-void gb::XOR(unsigned char val)
+void gb::XOR(uint8_t val)
 {
 	A ^= val;
 	Zb = checkZero(A);
@@ -3394,7 +3393,7 @@ void gb::XOR(unsigned char val)
 }
 
 // ORs A with a value.
-void gb::OR(unsigned char val)
+void gb::OR(uint8_t val)
 {
 	A |= val;
 	Zb = checkZero(A);
@@ -3404,7 +3403,7 @@ void gb::OR(unsigned char val)
 }
 
 // Sets the flags for a subtraction of an 8-bit value from A, without storing the result.
-void gb::CP(unsigned char val)
+void gb::CP(uint8_t val)
 {
 	Cb = val > A;
 	Hb = checkHalfCarry(A, val, '-');
@@ -3413,7 +3412,7 @@ void gb::CP(unsigned char val)
 }
 
 // Rotate a byte left or right. Can rotate normally or through carry.
-void gb::ROT(unsigned char mode, bool carry, unsigned char& val)
+void gb::ROT(char mode, bool carry, uint8_t &val)
 {
 	int oldCb = Cb;
 
@@ -3451,7 +3450,7 @@ void gb::ROT(unsigned char mode, bool carry, unsigned char& val)
 }
 
 // Shift a bit left or right, or right logically.
-void gb::SHIFT(unsigned char mode, unsigned char& r)
+void gb::SHIFT(char mode, uint8_t &r)
 {
 
 	// Check which direction we are shifting.
@@ -3485,9 +3484,9 @@ void gb::SHIFT(unsigned char mode, unsigned char& r)
 }
 
 // Checks the value of a given bit in a byte, and sets the zero flag if it is zero.
-void gb::BIT(unsigned char pos, unsigned char r)
+void gb::BIT(int pos, uint8_t r)
 {
-	unsigned char bit = (r >> pos) & 0x1;
+	uint8_t bit = (r >> pos) & 0x1;
 	if (bit == 0)
 		Zb = 1;
 	else
@@ -3497,7 +3496,7 @@ void gb::BIT(unsigned char pos, unsigned char r)
 }
 
 // Swaps the upper and lower nibbles of a byte.
-void gb::SWAP(unsigned char& val)
+void gb::SWAP(uint8_t &val)
 {
 	val = val << 4 | val >> 4;
 	Zb = checkZero(val);
@@ -3519,7 +3518,7 @@ void gb::CALL()
 }
 
 // Calls the given address.
-void gb::RST(unsigned char vec)
+void gb::RST(uint8_t vec)
 {
 	PC += 1;
 	writeToMemory(SP - 1, PC >> 8);
@@ -3531,7 +3530,7 @@ void gb::RST(unsigned char vec)
 // Enable interrupts.
 void gb::EI()
 {
-	IME = 1;
+	IME = true;
 	scheduleIME = false;
 	cyclesBeforeEnableIME = 1;
 }
@@ -3539,7 +3538,7 @@ void gb::EI()
 // Disable interrupts.
 void gb::DI()	
 {
-	IME = 0;
+	IME = false;
 	scheduleIME = false;
 	cyclesBeforeEnableIME = 1;
 }
