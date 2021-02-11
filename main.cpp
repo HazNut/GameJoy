@@ -80,10 +80,12 @@ void drawPixelOfTile(unsigned int gfxArray[160 * 144], unsigned int memLocation,
 	unsigned int total = lowBit + (highBit * 2);
 
 	// The total gives the shade of grey to be used for the pixel.
-	unsigned char shade = myGB.memory[BGP] >> total;
+	unsigned char shade = (myGB.memory[BGP] >> (total * 2)) & 0x3;
+	shade = 0xFFFFFF - (shade * 85);
 
 	// Now add this grey shade to the RGB array.
 	gfxArray[(x % 160) + (y * 160)] = ((shade << 16) | (shade << 8) | shade);
+	
 }
 
 // Draw a pixel of a given sprite.
@@ -104,7 +106,8 @@ void drawPixelOfSprite(unsigned int gfxArray[160 * 144], unsigned int memLocatio
 		unsigned int total = lowBit + (highBit * 2);
 
 		// The total gives the shade of grey to be used for the pixel.
-		unsigned char shade = myGB.memory[BGP] >> total;
+		unsigned char shade = (myGB.memory[BGP] >> (total * 2)) & 0x3;
+		shade = 0xFFFFFF - (shade * 85);
 
 		// Now add this grey shade to the RGB array.
 		gfxArray[((x + i) % 160) + (y * 160)] = ((shade << 16) | (shade << 8) | shade);
@@ -330,7 +333,7 @@ int main(int argc, char* args[])
 	std::string windowTitle = "GameJoy - " + std::string(gameTitle, 16);
 	SDL_SetWindowTitle(win, windowTitle.c_str());
 
-	unsigned int* gfxArray = new unsigned int [160 * 144];	// Stores the RGB value of each pixel.
+	unsigned int gfxArray[160 * 144];	// Stores the RGB value of each pixel.
 	
 	int cyclesSinceLastUpdate = 0;							// Every 100 cycles of the CPU, update the keyboard state.
 	myGB.modifyBit(myGB.memory[LCDC], 1, 7);
