@@ -1,15 +1,15 @@
 #include "gb.h"
 #include "SDL.h"
 #include <algorithm>
-#include <windows.h>
+#include <iostream>
 #include <shobjidl.h>
 #include <string>
-#include <iostream>
-
+#include <windows.h>
 
 gb myGB; // The Game Boy's CPU is stored as an object.
 
-// Checks to see if the Game Boy is requesting the input state, then returns the currently pressed keys.
+// Checks to see if the CPU wants to check for dpad/button inputs, then sets the JOYP register depending
+// on what directions/buttons were pressed.
 void processInputs(const Uint8 kb[], SDL_GameController *controller)
 {
 	// GB wants to check buttons.
@@ -61,7 +61,9 @@ void processInputs(const Uint8 kb[], SDL_GameController *controller)
 	}
 }
 
-// Draw a line of the currently selected tile.
+// Draw a pixel of the currently selected tile.
+// X = column of tile.
+// Y = row of tile.
 void drawPixelOfTile(unsigned int gfxArray[160 * 144], unsigned int memLocation, int x, int y)
 {
 	// Pixel info is stored across 2 bytes per row.
@@ -73,7 +75,8 @@ void drawPixelOfTile(unsigned int gfxArray[160 * 144], unsigned int memLocation,
 	unsigned char lowBit = (lowByte >> (7 - (x % 8))) & 0x1;
 	unsigned char highBit = (highByte >> (7 - (x % 8))) & 0x1;
 
-	// The high and low bit are added together.
+	// The high and low bit are added together. High bit is multiplied as
+	// the high byte is treated as bits 8-15 rather than 0-7.
 	unsigned int total = lowBit + (highBit * 2);
 
 	// The total gives the shade of grey to be used for the pixel.
@@ -83,6 +86,7 @@ void drawPixelOfTile(unsigned int gfxArray[160 * 144], unsigned int memLocation,
 	gfxArray[(x % 160) + (y * 160)] = ((shade << 16) | (shade << 8) | shade);
 }
 
+// Draw a pixel of a given sprite.
 void drawPixelOfSprite(unsigned int gfxArray[160 * 144], unsigned int memLocation, int x, int y)
 {
 	// Pixel info is stored across 2 bytes per row.
@@ -108,6 +112,7 @@ void drawPixelOfSprite(unsigned int gfxArray[160 * 144], unsigned int memLocatio
 	
 }
 
+// Draw the background.
 void drawBackground(unsigned int gfxArray[160 * 144])
 {
 	unsigned char scrollX, scrollY;						// Where the background is in relation to the rendering window.
@@ -160,11 +165,12 @@ void drawBackground(unsigned int gfxArray[160 * 144])
 				tileStartByte = 0x9000 + (signed char(currTile) * 16);		// 8800 addressing (signed).
 			}
 
-			drawPixelOfTile(gfxArray, tileStartByte, x, myGB.memory[LY]);	// Draw a line of the current tile.
+			drawPixelOfTile(gfxArray, tileStartByte, x, myGB.memory[LY]);	// Draw a pixel of the current tile.
 		}
 	}
 }
 
+// Draw the window.
 void drawWindow(unsigned int gfxArray[160 * 144])
 {
 	unsigned char winX, winY;							// Where the background is in relation to the rendering window.
@@ -209,6 +215,7 @@ void drawWindow(unsigned int gfxArray[160 * 144])
 	}
 }
 
+// Draw sprites.
 void drawSprites(unsigned int gfxArray[160 * 144])
 {
 	unsigned char x, y, currTile;
@@ -235,7 +242,7 @@ void drawSprites(unsigned int gfxArray[160 * 144])
 	}
 }
 
-// Open file dialog to select ROM, then store the ROM's path.
+// Open a file dialog to select a ROM, then store the ROM's path.
 void setPathUsingFileDialog(char* filepath)
 {
 
@@ -390,7 +397,7 @@ int main(int argc, char* args[])
 			SDL_RenderPresent(renderer);
 			myGB.modifyBit(myGB.memory[IF], 1, 0);	// VBLANK interrupt.
 
-			//// Set mode flag in STAT for VBLANK.
+			// Set mode flag in STAT for VBLANK.
 			myGB.modifyBit(myGB.memory[0xFF41], 1, 0);
 			myGB.modifyBit(myGB.memory[0xFF41], 0, 1);
 			if ((myGB.memory[0xFF41] >> 4) & 0x1)

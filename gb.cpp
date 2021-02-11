@@ -2,15 +2,12 @@
 #include <fstream>
 #include <iostream>
 
-
 // Initialize the Game Boy by setting the register values.
 void gb::initialize()
 {
-	// Sets up log file if logging.
-	
+	// Sets up log file for writing.
 	remove("output.txt");
 	fopen_s(&pFile, "output.txt", "a");
-	
 	
 	// Sets all memory locations to zero.
 	for (int i = 0x0000; i <= 0xFFFF; i++) 
@@ -27,16 +24,15 @@ void gb::initialize()
 	L = 0x4D;
 	SP = 0xFFFE;
 
-	// Flag bits of F - F is updated with these values after instruction execution.
+	// Set initial values of flag bits.
 	Zb = 1;
 	Nb = 0;
 	Hb = 1;
 	Cb = 1;
 
-	// Set values for I/O registers.
+	// Set values for the counter, I/O registers and program counter.
 	counter = 0xABBC;
 	memory[0xFF04] = counter >> 8;
-
 	memory[0xFF05] = 0x00;
 	memory[0xFF06] = 0x00;
 	memory[0xFF07] = 0x00;
@@ -68,12 +64,10 @@ void gb::initialize()
 	memory[0xFF4A] = 0x00;
 	memory[0xFF4B] = 0x00;
 	memory[0xFFFF] = 0x00;
-
-	PC = 0x100; // Program counter starts at 0x100 after boot.
-
+	PC = 0x100;
 }
 
-// Load a ROM, returning the game's name.
+// Load a ROM and set the game's name.
 void gb::loadGame(char filename[], char* gameTitle)
 {
 	std::streampos size;
@@ -82,7 +76,7 @@ void gb::loadGame(char filename[], char* gameTitle)
 	if (file.is_open())
 	{
 		size = file.tellg();
-		std::cout << size << "\n";
+		std::cout << "ROM size: " << size << "\n";
 		memblock = new char[unsigned int (size) + 1]; // Add 1 to hold escape code.
 		file.seekg(0, std::ios::beg);
 		file.read(memblock, size);
@@ -92,9 +86,10 @@ void gb::loadGame(char filename[], char* gameTitle)
 			memory[i] = memblock[i];
 		delete[] memblock;
 	}
-	else printf("Unable to load ROM.\n");
+	else 
+		printf("Unable to load ROM.\n");
 
-	// Get the game's name from the cartridge header.
+	// Set the game's name using information from the cartridge header.
 	int offset = 0;
 	for (unsigned int i = 0x134; i < 0x144; i++)
 	{
@@ -103,7 +98,7 @@ void gb::loadGame(char filename[], char* gameTitle)
 	}
 }
 
-// Emulate a cycle of the Game Boy.
+// Emulate a cycle of the Game Boy CPU.
 void gb::emulateCycle()
 {
 	// If scheduled to set the IME, check if it should occur on this cycle. If it should, set it, otherwise do it next cycle.
@@ -3126,7 +3121,7 @@ void gb::emulateCycle()
 	counter += 1;
 }
 
-
+// Increments the TIMA register, accounting for overflow.
 void gb::incTimer()
 {
 	memory[TIMA] += 1;
@@ -3137,8 +3132,7 @@ void gb::incTimer()
 	}
 }
 
-
-// Updates F with the new flag values.
+// Updates F with the cuurrent flag values.
 void gb::updateFlagReg()
 {
 	// Set each flag bit to the value it should be in the register F.
@@ -3163,7 +3157,7 @@ void gb::modifyBit(unsigned char &val, int bitVal, int pos)
 }
 
 // Check if the half-carry bit should be set for an addition/subtraction of two bytes.
-int gb::checkHalfCarry(unsigned char a, unsigned char b, char mode)
+bool gb::checkHalfCarry(unsigned char a, unsigned char b, char mode)
 {
 	if (mode == '+')
 		if (((a & 0xF) + (b & 0xF)) > 0xF)
@@ -3181,7 +3175,7 @@ int gb::checkHalfCarry(unsigned char a, unsigned char b, char mode)
 }
 
 // Check if the half-carry bit should be set for an addition/subtraction of two 16-bit values.
-int gb::checkHalfCarry(unsigned int val1, unsigned int val2, char mode)
+bool gb::checkHalfCarry(unsigned int val1, unsigned int val2, char mode)
 {
 	if (mode == '+')
 		if (((val1 & 0xFFF) + (val2 & 0xFFF)) > 0xFFF)
@@ -3199,7 +3193,7 @@ int gb::checkHalfCarry(unsigned int val1, unsigned int val2, char mode)
 }
 
 // Check if the zero flag should be set based on a input value.
-int gb::checkZero(unsigned char val)
+bool gb::checkZero(unsigned char val)
 {
 	if (val == 0)
 		return 1;
@@ -3211,6 +3205,54 @@ int gb::checkZero(unsigned char val)
 unsigned int gb::combineReg(unsigned char reg1, unsigned char reg2)
 {
 	return (reg1 << 8) | reg2;
+}
+
+// Used to control memory writes by instructions in the CPU's instruction set. Writes to memory
+// locations performed outside of actual CPU instructions can write directly to memory, e.g. 
+// updating the JOYP register when an input is detected.
+void gb::writeToMemory(unsigned int addr, unsigned char data)
+{
+	if (addr < 0x8000) // ROM bank
+	{
+		return;
+	}
+	else if (0xDDFF >= addr >= 0xC000)	// Work RAM (mirrored to echo RAM)
+	{
+		memory[addr] = data;
+		memory[addr + 0x2000] = data;
+	}
+	else if (0xFDFF >= addr >= 0xE000)	// Echo RAM
+	{
+		memory[addr] = data;
+		memory[addr - 0x2000] = data;
+	}
+	else if (0xFEFF >= addr >= 0xFEA0)	// Unused range
+	{
+		printf("Game tried to write to unusable range! addr = %X, data = %X\n", addr, data);
+	}
+	else if (addr == 0xFF00)  // JOYP
+	{
+		modifyBit(memory[addr], (data >> 4) & 0x1, 4);
+		modifyBit(memory[addr], (data >> 5) & 0x1, 5);
+	}
+	else if (addr == 0xFF04)			// DIV register
+	{
+		memory[addr] = 0x0;
+	}
+	else if (addr == 0xFF05)			// TAC register
+	{
+		modifyBit(memory[TAC], data & 0x1, 0);
+		modifyBit(memory[TAC], (data >> 1) & 0x1, 1);
+		modifyBit(memory[TAC], (data >> 2) & 0x1, 2);
+	}
+	else if (addr == 0xFF46)			// DMA transfer
+	{
+		memory[0xFF46] = data;
+		for (int i = 0; i < 0xA0; i++)
+			memory[0xFE00 | i] = memory[(memory[0xFF46] * 0x100) | i];
+	}
+	else								// Unconditional transfer
+		memory[addr] = data;
 }
 
 // Puts the value in a 16-bit register back into the two original registers.
@@ -3500,49 +3542,4 @@ void gb::DI()
 	IME = 0;
 	scheduleIME = false;
 	cyclesBeforeEnableIME = 1;
-}
-
-void gb::writeToMemory(unsigned int addr, unsigned char data)
-{
-	if (addr < 0x8000) // ROM bank
-	{
-		return;
-	}
- 	else if (0xDDFF >= addr >= 0xC000)	// Work RAM (mirrored to echo RAM)
-	{
-		memory[addr] = data;
-		memory[addr + 0x2000] = data;
-	}
-	else if (0xFDFF >= addr >= 0xE000)	// Echo RAM
-	{
-		memory[addr] = data;
-		memory[addr - 0x2000] = data;
-	}
-	else if (0xFEFF >= addr >= 0xFEA0)	// Unused range
-	{
-		printf("Game tried to write to unusable range! addr = %X, data = %X\n", addr, data);
-	}
-	else if (addr == 0xFF00)  // JOYP
-	{
-		modifyBit(memory[addr], (data >> 4) & 0x1, 4);
-		modifyBit(memory[addr], (data >> 5) & 0x1, 5);
-	}
-	else if (addr == 0xFF04)			// DIV register
-	{
-		memory[addr] = 0x0;
-	}
-	else if (addr == 0xFF05)			// TAC register
-	{
-		modifyBit(memory[TAC], data & 0x1, 0);
-		modifyBit(memory[TAC], (data >> 1) & 0x1, 1);
-		modifyBit(memory[TAC], (data >> 2) & 0x1, 2);
-	}
-	else if (addr == 0xFF46)			// DMA transfer
-	{
-		memory[0xFF46] = data;
-		for (int i = 0; i < 0xA0; i++)
-			memory[0xFE00 | i] = memory[(memory[0xFF46] * 0x100) | i];
-	}
-	else								// Unconditional transfer
-		memory[addr] = data;
 }
