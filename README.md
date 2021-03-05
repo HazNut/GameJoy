@@ -4,8 +4,7 @@ The emulator is being tested using test ROMs created by Blargg. They can be down
 
 I have implemented the majority of opcodes on the CPU, and am currently working on the graphics and other features.
 
-Note: The project makes use of SDL2. The SDL folder needs to be included in the main directory. 
+![image](images/screenshot.png)
 
-The project can be compiled and run with Visual Studio 2019.
-
-![image](https://imgur.com/B5DHOsm.png)
+## Setup
+The latest version can be downloaded from [here](https://github.com/HazNut/GameJoy/releases/latest).
