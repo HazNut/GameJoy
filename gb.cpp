@@ -6,9 +6,12 @@
 void gb::initialize()
 {
 	// Sets up log file for writing.
-	remove("output.txt");
-	fopen_s(&pFile, "output.txt", "a");
-	
+	if (logging)
+	{
+		remove("output.txt");
+		fopen_s(&pFile, "output.txt", "a");
+	}
+
 	// Sets all memory locations to zero.
 	for (int i = 0x0000; i <= 0xFFFF; i++) 
 		memory[i] = 0x0;
@@ -76,7 +79,7 @@ void gb::loadGame(char filename[], char* gameTitle)
 	if (file.is_open())
 	{
 		size = file.tellg();
-		std::cout << "ROM size: " << size << "\n";
+		std::cout << "ROM size: " << size << '\n';
 		memblock = new char[unsigned int (size) + 1]; // Add 1 to hold escape code.
 		file.seekg(0, std::ios::beg);
 		file.read(memblock, size);
@@ -2944,7 +2947,7 @@ void gb::emulateCycle()
 				break;
 
 			case 0x08: // ADD SP, r8
-				ADD(SP, (int8_t) memory[PC + 1]);
+				ADD(SP, static_cast<int8_t>(memory[PC + 1]));
 				PC += 2;
 				break;
 
@@ -3037,7 +3040,7 @@ void gb::emulateCycle()
 			{
 				int16_t val = memory[PC + 1];
 				uint16_t tempSP = SP;
-				ADD(tempSP, (int8_t) val);
+				ADD(tempSP, static_cast<int8_t>(val));
 				H = (tempSP >> 8) & 0xFF;
 				L = tempSP & 0xFF;
 				PC += 2;
@@ -3093,30 +3096,30 @@ void gb::emulateCycle()
 
 	memory[DIV] = counter >> 8; // DIV is upper 8 bits of internal counter.
 
-	if (((memory[TAC] >> 2) & 0b1) == 0b1) // If timer enabled.
+	if (((memory[TAC] >> 2) & 0x1) == 0x1) // If timer enabled.
 	{
-		if ((memory[TAC] & 0b11) == 0b00)
+		if ((memory[TAC] & 0x3) == 0x0)
 		{
 			if (counter % 256 == 0)
 				incTimer();
 		}
-		else if ((memory[TAC] & 0b11) == 0b01)
+		else if ((memory[TAC] & 0x3) == 0x1)
 		{
 			if (counter % 4 == 0)
 				incTimer();
 		}
-		else if ((memory[TAC] & 0b11) == 0b10)
+		else if ((memory[TAC] & 0x3) == 0x2)
 		{
 			if (counter % 16 == 0)
 				incTimer();
 		}
-		else if ((memory[TAC] & 0b11) == 0b11)
+		else if ((memory[TAC] & 0x3) == 0x3)
 		{
 			if (counter % 64 == 0)
 				incTimer();
 		}
 	}
-	//std::cout << "Counter: " << counter << ", DIV: " << (int)memory[DIV] << "TIMA: " << (int)memory[TIMA] << "\n";
+	//std::cout << "Counter: " << counter << ", DIV: " << (int)memory[DIV] << "TIMA: " << (int)memory[TIMA] << '\n';
 	counter += 1;
 }
 

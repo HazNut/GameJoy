@@ -13,10 +13,6 @@ gb myGB; // The Game Boy's CPU is stored as an object.
 // Also handles the spacebar to toggle logging.
 void processInputs(const Uint8 kb[], SDL_GameController *controller)
 {
-	// Toggle logging.
-	if (kb[SDL_SCANCODE_SPACE])
-		myGB.logging = !myGB.logging;
-
 	// GB wants to check buttons.
 	if (((myGB.memory[JOYP] >> 5) & 0x1) == 0)
 	{
@@ -162,10 +158,10 @@ void drawBackground(uint32_t gfxArray[])
 
 		// Gets the memory location of the start of the tile data using the correct method.
 		if ((myGB.memory[LCDC] >> 4) & 0x1)
-			tileStart = 0x8000 + (tileNum * 16);			  // 8000 addressing (unsigned).
+			tileStart = 0x8000 + (tileNum * 16);						// 8000 addressing (unsigned).
 		else
 		{
-			tileStart = 0x9000 + ((int8_t) tileNum * 16);  // 8800 addressing (signed).
+			tileStart = 0x9000 + (static_cast<int8_t>(tileNum) * 16);	// 8800 addressing (signed).
 		}
 
 		drawPixelOfTile(gfxArray, tileStart, x, myGB.memory[LY]);
@@ -199,7 +195,7 @@ void drawWindow(uint32_t gfxArray[])
 			tileStart = 0x8000 + (currTile * 16);
 		else
 		{
-			tileStart = 0x9000 + ((int8_t) currTile * 16);
+			tileStart = 0x9000 + (static_cast<int8_t>(currTile) * 16);
 		}
 
 		drawPixelOfTile(gfxArray, tileStart, x, myGB.memory[LY]);
