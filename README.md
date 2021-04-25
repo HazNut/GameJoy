@@ -1,8 +1,12 @@
 # GameJoy
 GameJoy is a Game Boy emulator being developed in C++.  
-The emulator is being tested using test ROMs created by Blargg. They can be downloaded from https://gbdev.gg8.se/files/roms/blargg-gb-tests/ under cpu_instrs.zip. Currently, test ROMs 01, 03, 04, 05, 06, 07, 08, 09, 10 and 11 are passed.
+To test the emulator, I've been using the individual test ROMs created by Blargg. They can be downloaded from https://gbdev.gg8.se/files/roms/blargg-gb-tests/ under cpu_instrs.zip, inside the 'individual' folder. Currently, all tests apart from 02 are passed.
 
-I have implemented the majority of opcodes on the CPU, and am currently working on the graphics and other features.
+So far, it supports Tetris, with some graphical errors.
+
+The emulator currently runs as fast as possible, so I need to cap its speed.
+
+360 controllers are supported, just make sure you plug it in before starting the emulator!
 
 ![image](images/screenshot.png)
 
